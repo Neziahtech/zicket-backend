@@ -95,7 +95,10 @@ export class VerifyAttendService {
       if (error instanceof EventContractConfigError) {
         throw error;
       }
-      console.error('[VerifyAttendService] contract verify_and_attend failed:', error);
+      console.error(
+        '[VerifyAttendService] contract verify_and_attend failed:',
+        error,
+      );
       throw new VerifyAttendFailedError();
     }
 

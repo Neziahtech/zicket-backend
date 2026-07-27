@@ -51,12 +51,14 @@ class EmailWorker {
 
       // Event handlers
       this.worker.on('completed', (job) => {
-        console.log(`Ã¢Å“â€œ Email job ${job.id} completed successfully`);
+        console.log(
+          `ÃƒÂ¢Ã…â€œÃ¢â‚¬Å“ Email job ${job.id} completed successfully`,
+        );
       });
 
       this.worker.on('failed', (job, error) => {
         console.error(
-          `Ã¢Å“â€” Email job ${job?.id} failed (attempt ${job?.attemptsMade}/${job?.opts.attempts}):`,
+          `ÃƒÂ¢Ã…â€œÃ¢â‚¬â€ Email job ${job?.id} failed (attempt ${job?.attemptsMade}/${job?.opts.attempts}):`,
           error.message,
         );
       });
@@ -111,11 +113,11 @@ class EmailWorker {
           result = await this.sendTicketUpdateNotification(
             payload as SendTicketUpdateNotificationPayload,
           );
+          break;
         case EmailJobType.SEND_WAITLIST_SPOT_AVAILABLE:
           result = await this.sendWaitlistSpotAvailable(
             payload as SendWaitlistSpotAvailablePayload,
           );
-          break;
           break;
 
         default:
@@ -157,7 +159,7 @@ class EmailWorker {
         <body>
           <div class="container">
             <div class="header">
-              <h1>Ã°Å¸Å½Â« Zicket</h1>
+              <h1>ÃƒÂ°Ã…Â¸Ã…Â½Ã‚Â« Zicket</h1>
             </div>
             <div class="content">
               <h2>Verify your account</h2>
@@ -181,7 +183,7 @@ class EmailWorker {
 
       This code expires in 10 minutes. If you didn't create an account, you can ignore this email.
 
-      Ã‚Â© ${new Date().getFullYear()} Zicket. All rights reserved.
+      Ãƒâ€šÃ‚Â© ${new Date().getFullYear()} Zicket. All rights reserved.
     `;
 
     return this.sendEmail({
@@ -218,7 +220,7 @@ class EmailWorker {
         <body>
           <div class="container">
             <div class="header">
-              <h1>Ã°Å¸Å½Â« Zicket Login</h1>
+              <h1>ÃƒÂ°Ã…Â¸Ã…Â½Ã‚Â« Zicket Login</h1>
             </div>
             <div class="content">
               <h2>Magic Link Login</h2>
@@ -235,7 +237,7 @@ class EmailWorker {
               </p>
               
               <div class="warning">
-                <strong>Ã¢Å¡Â Ã¯Â¸Â Security Notice:</strong>
+                <strong>ÃƒÂ¢Ã…Â¡Ã‚Â ÃƒÂ¯Ã‚Â¸Ã‚Â Security Notice:</strong>
                 <ul>
                   <li>This link expires in 15 minutes</li>
                   <li>It can only be used once</li>
@@ -268,7 +270,7 @@ class EmailWorker {
       - If you didn't request this, please ignore this email
       
       This is an automated email from Zicket. Please do not reply.
-      Ã‚Â© ${new Date().getFullYear()} Zicket. All rights reserved.
+      Ãƒâ€šÃ‚Â© ${new Date().getFullYear()} Zicket. All rights reserved.
     `;
 
     return this.sendEmail({
@@ -319,7 +321,7 @@ class EmailWorker {
         <body>
           <div class="container">
             <div class="header">
-              <h1>Ã°Å¸Å½Â« Purchase Confirmation</h1>
+              <h1>ÃƒÂ°Ã…Â¸Ã…Â½Ã‚Â« Purchase Confirmation</h1>
             </div>
             <div class="content">
               <h2>Thank you, ${userName}!</h2>
@@ -379,7 +381,7 @@ class EmailWorker {
       If you have any questions, please contact the event organizer or support team.
       
       This is an automated email from Zicket. Please do not reply.
-      Ã‚Â© ${new Date().getFullYear()} Zicket. All rights reserved.
+      Ãƒâ€šÃ‚Â© ${new Date().getFullYear()} Zicket. All rights reserved.
     `;
 
     return this.sendEmail({
@@ -428,7 +430,7 @@ class EmailWorker {
         <body>
           <div class="container">
             <div class="header">
-              <h1>Ã°Å¸Å½Â« Ticket Status Update</h1>
+              <h1>ÃƒÂ°Ã…Â¸Ã…Â½Ã‚Â« Ticket Status Update</h1>
             </div>
             <div class="content">
               <h2>Hello, ${userName}!</h2>
@@ -482,7 +484,7 @@ class EmailWorker {
       If you have any questions, please contact support.
       
       This is an automated email from Zicket. Please do not reply.
-      Ã‚Â© ${new Date().getFullYear()} Zicket. All rights reserved.
+      Ãƒâ€šÃ‚Â© ${new Date().getFullYear()} Zicket. All rights reserved.
     `;
 
     return this.sendEmail({
@@ -595,7 +597,10 @@ class EmailWorker {
         timestamp: new Date(),
       };
     } catch (error: any) {
-      console.error('Error sending waitlist spot-available email:', error.message);
+      console.error(
+        'Error sending waitlist spot-available email:',
+        error.message,
+      );
       return {
         success: false,
         error: error.message,

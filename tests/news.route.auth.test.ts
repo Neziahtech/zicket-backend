@@ -10,7 +10,10 @@ const VALID_ID = '65f9f9e4c51058f58d05d9aa';
 
 describe('News route — authentication & authorization guards', () => {
   describe('unauthenticated requests (no token)', () => {
-    const mutatingRoutes: Array<{ method: 'post' | 'patch' | 'delete'; path: string }> = [
+    const mutatingRoutes: Array<{
+      method: 'post' | 'patch' | 'delete';
+      path: string;
+    }> = [
       { method: 'post', path: '/news' },
       { method: 'patch', path: `/news/${VALID_ID}` },
       { method: 'delete', path: `/news/${VALID_ID}` },
@@ -23,14 +26,19 @@ describe('News route — authentication & authorization guards', () => {
       async ({ method, path }) => {
         const res = await (request(app) as any)[method](path).send({});
         expect(res.status).toBe(401);
-        expect(res.body).toMatchObject({ error: expect.stringContaining('Unauthorized') });
+        expect(res.body).toMatchObject({
+          error: expect.stringContaining('Unauthorized'),
+        });
       },
     );
   });
 
   describe('authenticated non-admin requests', () => {
     beforeEach(() => {
-      (JwtVerify as jest.Mock).mockReturnValue({ id: 'user-id-1', email: 'user@example.com' });
+      (JwtVerify as jest.Mock).mockReturnValue({
+        id: 'user-id-1',
+        email: 'user@example.com',
+      });
       (User.findById as jest.Mock).mockResolvedValue({
         _id: 'user-id-1',
         email: 'user@example.com',
@@ -44,7 +52,10 @@ describe('News route — authentication & authorization guards', () => {
       jest.clearAllMocks();
     });
 
-    const mutatingRoutes: Array<{ method: 'post' | 'patch' | 'delete'; path: string }> = [
+    const mutatingRoutes: Array<{
+      method: 'post' | 'patch' | 'delete';
+      path: string;
+    }> = [
       { method: 'post', path: '/news' },
       { method: 'patch', path: `/news/${VALID_ID}` },
       { method: 'delete', path: `/news/${VALID_ID}` },
@@ -55,11 +66,14 @@ describe('News route — authentication & authorization guards', () => {
     it.each(mutatingRoutes)(
       '$method $path returns 403 for non-admin user',
       async ({ method, path }) => {
-        const res = await (request(app) as any)[method](path)
+        const res = await (request(app) as any)
+          [method](path)
           .set('Authorization', 'Bearer valid.token')
           .send({});
         expect(res.status).toBe(403);
-        expect(res.body).toMatchObject({ error: 'Forbidden: Admin access required' });
+        expect(res.body).toMatchObject({
+          error: 'Forbidden: Admin access required',
+        });
       },
     );
   });

@@ -94,11 +94,9 @@ describe('VerifyAttendService (#121)', () => {
     } as any);
 
     mockAttendanceNullifier.findOne.mockReturnValue({
-      lean: jest
-        .fn()
-        .mockResolvedValue({
-          nullifier: attendanceNullifierDigest(eventId, nullifier),
-        }),
+      lean: jest.fn().mockResolvedValue({
+        nullifier: attendanceNullifierDigest(eventId, nullifier),
+      }),
     } as any);
 
     await expect(

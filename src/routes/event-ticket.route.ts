@@ -69,6 +69,10 @@ eventTicketRoutes.post('/:eventId/waitlist', authGuard, joinWaitlist);
 eventTicketRoutes.delete('/:eventId/waitlist', authGuard, leaveWaitlist);
 
 // GET /api/event-tickets/:eventId/waitlist/status - Current waitlist status + position
-eventTicketRoutes.get('/:eventId/waitlist/status', authGuard, getWaitlistStatus);
+eventTicketRoutes.get(
+  '/:eventId/waitlist/status',
+  authGuard,
+  getWaitlistStatus,
+);
 
 export default eventTicketRoutes;

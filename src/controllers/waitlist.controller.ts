@@ -2,7 +2,11 @@ import { RequestHandler } from 'express';
 import mongoose from 'mongoose';
 import WaitlistService from '../services/waitlist.service';
 import { UserAuthenticatedReq } from '../utils/types';
-import { AppError, ValidationError, UnauthorizedError } from '../errors/AppError';
+import {
+  AppError,
+  ValidationError,
+  UnauthorizedError,
+} from '../errors/AppError';
 
 function getUserId(req: UserAuthenticatedReq): string | undefined {
   return req.user?._id?.toString?.() ?? req.user?.id;
@@ -37,7 +41,8 @@ export const joinWaitlist: RequestHandler = async (
     return res.status(400).json({
       success: false,
       error: 'WAITLIST_JOIN_FAILED',
-      message: error instanceof Error ? error.message : 'Failed to join waitlist',
+      message:
+        error instanceof Error ? error.message : 'Failed to join waitlist',
     });
   }
 };
@@ -61,7 +66,9 @@ export const leaveWaitlist: RequestHandler = async (
     }
 
     await WaitlistService.leave(userId, eventId);
-    return res.status(200).json({ success: true, message: 'Removed from waitlist' });
+    return res
+      .status(200)
+      .json({ success: true, message: 'Removed from waitlist' });
   } catch (error) {
     if (error instanceof AppError) {
       return res
@@ -71,7 +78,8 @@ export const leaveWaitlist: RequestHandler = async (
     return res.status(400).json({
       success: false,
       error: 'WAITLIST_LEAVE_FAILED',
-      message: error instanceof Error ? error.message : 'Failed to leave waitlist',
+      message:
+        error instanceof Error ? error.message : 'Failed to leave waitlist',
     });
   }
 };
@@ -106,7 +114,9 @@ export const getWaitlistStatus: RequestHandler = async (
       success: false,
       error: 'WAITLIST_STATUS_FAILED',
       message:
-        error instanceof Error ? error.message : 'Failed to fetch waitlist status',
+        error instanceof Error
+          ? error.message
+          : 'Failed to fetch waitlist status',
     });
   }
 };

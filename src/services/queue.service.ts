@@ -46,7 +46,6 @@ class QueueService {
         ...queueConfig,
       });
 
-
       this.waitlistQueue = new Queue(QUEUE_NAMES.WAITLIST, {
         connection: redisConfig,
         ...queueConfig,
@@ -272,9 +271,7 @@ class QueueService {
       },
     );
 
-    console.log(
-      `Queued waitlist spot-available email for ${payload.userEmail}, Job ID: ${job.id}`,
-    );
+    console.log(`Queued waitlist spot-available email, Job ID: ${job.id}`);
     return job.id!;
   }
 

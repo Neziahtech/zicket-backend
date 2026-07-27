@@ -2,7 +2,9 @@
  * Parses zkPassport expiration from public signals (index 2 per query-circuit layout).
  * Supports Unix seconds or YYYYMMDD packed integers (UTC end-of-day).
  */
-export function extractZkPassportExpiryUnix(publicSignals: string[]): number | null {
+export function extractZkPassportExpiryUnix(
+  publicSignals: string[],
+): number | null {
   if (publicSignals.length < 3) {
     return null;
   }

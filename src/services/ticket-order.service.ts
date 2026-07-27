@@ -161,11 +161,11 @@ export class TicketOrderService {
     orderId: string,
     newStatus: number,
   ): Promise<{ order: ITicketOrder | null; notificationJobId: string | null }> {
-      const existingOrder = await TicketOrder.findById(orderId);
-      const wasAlreadyTerminalCancel = existingOrder
-        ? [2, 4].includes(existingOrder.status)
-        : false;
-      const isNowTerminalCancel = [2, 4].includes(newStatus);
+    const existingOrder = await TicketOrder.findById(orderId);
+    const wasAlreadyTerminalCancel = existingOrder
+      ? [2, 4].includes(existingOrder.status)
+      : false;
+    const isNowTerminalCancel = [2, 4].includes(newStatus);
     try {
       const order = await TicketOrder.findByIdAndUpdate(
         orderId,
@@ -175,7 +175,6 @@ export class TicketOrderService {
 
       if (!order) {
         throw new Error(`Ticket order ${orderId} not found`);
-
       }
       // #168: On a first-time transition into cancelled/refunded, restore
       // the freed inventory and notify the next person(s) on the waitlist.
@@ -184,7 +183,10 @@ export class TicketOrderService {
           const freedEvent = await EventTicket.findById(order.eventTicket);
           if (freedEvent && freedEvent.eventStatus !== 'cancelled') {
             freedEvent.availableTickets += order.quantity;
-            freedEvent.soldTickets = Math.max(0, freedEvent.soldTickets - order.quantity);
+            freedEvent.soldTickets = Math.max(
+              0,
+              freedEvent.soldTickets - order.quantity,
+            );
             await freedEvent.save();
 
             await WaitlistService.processNextForEvent(

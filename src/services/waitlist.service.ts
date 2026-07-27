@@ -9,7 +9,11 @@ import {
   ConflictError,
 } from '../errors/AppError';
 
-const HOLD_MINUTES = Number(process.env.WAITLIST_HOLD_MINUTES) || 15;
+const HOLD_MINUTES_ENV = process.env.WAITLIST_HOLD_MINUTES;
+const HOLD_MINUTES =
+  HOLD_MINUTES_ENV !== undefined && !Number.isNaN(Number(HOLD_MINUTES_ENV))
+    ? Number(HOLD_MINUTES_ENV)
+    : 15;
 
 export interface WaitlistStatusResponse {
   status: WaitlistStatusValue;
@@ -41,7 +45,10 @@ export class WaitlistService {
     if (!event) {
       throw new NotFoundError('Event not found');
     }
-    if (event.eventStatus === 'cancelled' || event.eventStatus === 'completed') {
+    if (
+      event.eventStatus === 'cancelled' ||
+      event.eventStatus === 'completed'
+    ) {
       throw new ValidationError(
         'Cannot join the waitlist for a cancelled or completed event',
       );
@@ -69,7 +76,9 @@ export class WaitlistService {
       });
     } catch (error: any) {
       if (error?.code === 11000) {
-        throw new ConflictError('You are already on the waitlist for this event');
+        throw new ConflictError(
+          'You are already on the waitlist for this event',
+        );
       }
       throw error;
     }

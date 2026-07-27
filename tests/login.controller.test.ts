@@ -77,7 +77,9 @@ describe('loginController', () => {
   });
 
   it('returns 400 when password is a NoSQL injection payload', async () => {
-    const req = { body: { email: 'test@example.com', password: { $ne: null } } };
+    const req = {
+      body: { email: 'test@example.com', password: { $ne: null } },
+    };
     const res = createResponse();
     await loginController(req as any, res as any, jest.fn());
     expect(res.status).toHaveBeenCalledWith(400);
@@ -89,7 +91,9 @@ describe('loginController', () => {
 
   it('returns 404 when user not found', async () => {
     (User.findOne as jest.Mock).mockResolvedValue(null);
-    const req = { body: { email: 'nonexistent@example.com', password: 'secret123' } };
+    const req = {
+      body: { email: 'nonexistent@example.com', password: 'secret123' },
+    };
     const res = createResponse();
     await loginController(req as any, res as any, jest.fn());
     expect(res.status).toHaveBeenCalledWith(404);

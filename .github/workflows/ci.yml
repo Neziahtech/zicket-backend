@@ -80,11 +80,11 @@ jobs:
           get_mark() {
             if [ "$1" = "success" ]; then echo "✅"; else echo "❌"; fi
           }
-          
+
           echo "Build result: $(get_mark '${{ needs.build.result }}')"
           echo "Lint result: $(get_mark '${{ needs.lint.result }}')"
           echo "Tests result: $(get_mark '${{ needs.tests.result }}')"
-          
+
           if [ "${{ needs.build.result }}" != "success" ] || [ "${{ needs.tests.result }}" != "success" ]; then
             exit 1
           fi

@@ -32,9 +32,9 @@ describe('WaitlistService', () => {
     it('throws NotFoundError when the event does not exist', async () => {
       (mockEventTicket.findById as jest.Mock).mockResolvedValue(null);
 
-      await expect(WaitlistService.join(userId, eventId)).rejects.toBeInstanceOf(
-        NotFoundError,
-      );
+      await expect(
+        WaitlistService.join(userId, eventId),
+      ).rejects.toBeInstanceOf(NotFoundError);
     });
 
     it('throws ValidationError when the event is cancelled', async () => {
@@ -43,9 +43,9 @@ describe('WaitlistService', () => {
         availableTickets: 0,
       });
 
-      await expect(WaitlistService.join(userId, eventId)).rejects.toBeInstanceOf(
-        ValidationError,
-      );
+      await expect(
+        WaitlistService.join(userId, eventId),
+      ).rejects.toBeInstanceOf(ValidationError);
     });
 
     it('throws ValidationError when tickets are still available', async () => {
@@ -54,9 +54,9 @@ describe('WaitlistService', () => {
         availableTickets: 5,
       });
 
-      await expect(WaitlistService.join(userId, eventId)).rejects.toBeInstanceOf(
-        ValidationError,
-      );
+      await expect(
+        WaitlistService.join(userId, eventId),
+      ).rejects.toBeInstanceOf(ValidationError);
     });
 
     it('throws ConflictError when already on the waitlist', async () => {
@@ -64,11 +64,13 @@ describe('WaitlistService', () => {
         eventStatus: 'upcoming',
         availableTickets: 0,
       });
-      (mockWaitlist.findOne as jest.Mock).mockResolvedValue({ status: 'waiting' });
+      (mockWaitlist.findOne as jest.Mock).mockResolvedValue({
+        status: 'waiting',
+      });
 
-      await expect(WaitlistService.join(userId, eventId)).rejects.toBeInstanceOf(
-        ConflictError,
-      );
+      await expect(
+        WaitlistService.join(userId, eventId),
+      ).rejects.toBeInstanceOf(ConflictError);
     });
 
     it('creates a waiting entry for a sold-out event', async () => {
@@ -96,9 +98,9 @@ describe('WaitlistService', () => {
     it('throws NotFoundError when there is no active entry', async () => {
       (mockWaitlist.findOne as jest.Mock).mockResolvedValue(null);
 
-      await expect(WaitlistService.leave(userId, eventId)).rejects.toBeInstanceOf(
-        NotFoundError,
-      );
+      await expect(
+        WaitlistService.leave(userId, eventId),
+      ).rejects.toBeInstanceOf(NotFoundError);
     });
 
     it('cancels a waiting entry without processing the next person', async () => {
@@ -115,7 +117,10 @@ describe('WaitlistService', () => {
     });
 
     it('cancels a notified (held) entry and processes the next person', async () => {
-      const entry: any = { status: 'notified', save: jest.fn().mockResolvedValue(undefined) };
+      const entry: any = {
+        status: 'notified',
+        save: jest.fn().mockResolvedValue(undefined),
+      };
       (mockWaitlist.findOne as jest.Mock)
         .mockResolvedValueOnce(entry) // leave() lookup
         .mockResolvedValueOnce(null); // processNextForEvent's internal find via .find(), not findOne - safe no-op path
@@ -214,7 +219,9 @@ describe('WaitlistService', () => {
 
       expect(entry.status).toBe('notified');
       expect(entry.save).toHaveBeenCalled();
-      expect(mockQueueService.enqueueWaitlistSpotAvailable).toHaveBeenCalledWith(
+      expect(
+        mockQueueService.enqueueWaitlistSpotAvailable,
+      ).toHaveBeenCalledWith(
         expect.objectContaining({
           userEmail: 'user@example.com',
           eventName: 'Test Event',
@@ -247,13 +254,17 @@ describe('WaitlistService', () => {
       await WaitlistService.processNextForEvent(eventId, 1);
 
       expect(entry.status).toBe('expired');
-      expect(mockQueueService.enqueueWaitlistSpotAvailable).not.toHaveBeenCalled();
+      expect(
+        mockQueueService.enqueueWaitlistSpotAvailable,
+      ).not.toHaveBeenCalled();
     });
   });
 
   describe('expireHold', () => {
     it('does nothing when the entry is not in notified status', async () => {
-      (mockWaitlist.findById as jest.Mock).mockResolvedValue({ status: 'converted' });
+      (mockWaitlist.findById as jest.Mock).mockResolvedValue({
+        status: 'converted',
+      });
 
       await WaitlistService.expireHold('entry-1');
 
@@ -284,7 +295,9 @@ describe('WaitlistService', () => {
 
   describe('cancelForEvent', () => {
     it('marks all active entries for the event as cancelled', async () => {
-      (mockWaitlist.updateMany as jest.Mock).mockResolvedValue({ modifiedCount: 3 });
+      (mockWaitlist.updateMany as jest.Mock).mockResolvedValue({
+        modifiedCount: 3,
+      });
 
       await WaitlistService.cancelForEvent(eventId);
 

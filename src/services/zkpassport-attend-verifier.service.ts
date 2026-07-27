@@ -96,7 +96,11 @@ export class ZkPassportAttendVerifier {
             res.on('data', (chunk) => chunks.push(chunk));
             res.on('end', () => {
               const text = Buffer.concat(chunks).toString('utf8');
-              if (res.statusCode && res.statusCode >= 200 && res.statusCode < 300) {
+              if (
+                res.statusCode &&
+                res.statusCode >= 200 &&
+                res.statusCode < 300
+              ) {
                 resolve(text);
               } else {
                 reject(new Error(`zkPassport relay status ${res.statusCode}`));
