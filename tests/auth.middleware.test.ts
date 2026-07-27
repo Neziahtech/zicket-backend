@@ -6,7 +6,10 @@ import jwt from 'jsonwebtoken';
 jest.mock('../src/models/user');
 jest.mock('../src/middlewares/jwt');
 
-const parseCookie = (header: string | undefined, name: string): string | undefined => {
+const parseCookie = (
+  header: string | undefined,
+  name: string,
+): string | undefined => {
   if (!header) return undefined;
   const cookies = header.split(';').map((c) => c.trim().split('='));
   const cookie = cookies.find(([key]) => key === name);

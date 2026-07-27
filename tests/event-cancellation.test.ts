@@ -9,6 +9,7 @@ jest.mock('../src/models/event-ticket');
 jest.mock('../src/models/ticket-order');
 jest.mock('../src/models/user');
 jest.mock('../src/services/zk-email-notification.service');
+jest.mock('../src/services/waitlist.service');
 
 jest.mock('mongoose', () => {
   const actual = jest.requireActual('mongoose');

@@ -1,4 +1,5 @@
 import mongoose from 'mongoose';
+import WaitlistService from './waitlist.service';
 import EventTicket, { IEventTicket } from '../models/event-ticket';
 import TicketOrder, { ITicketOrder } from '../models/ticket-order';
 import User from '../models/user';
@@ -640,6 +641,17 @@ export class EventTicketService {
 
       await session.commitTransaction();
       session.endSession();
+
+      // #168: Event is cancelled - nothing will ever go on sale again,
+      // so close out any active waitlist entries rather than leaving them dangling.
+      try {
+        await WaitlistService.cancelForEvent(eventId);
+      } catch (waitlistError) {
+        console.error(
+          'Failed to cancel waitlist entries for event ' + eventId + ':',
+          waitlistError,
+        );
+      }
 
       return event;
     } catch (error) {

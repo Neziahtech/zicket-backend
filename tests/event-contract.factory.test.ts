@@ -1,4 +1,7 @@
-import { getEventContractProvider, EventContractConfigError } from '../src/provider/event-contract.factory';
+import {
+  getEventContractProvider,
+  EventContractConfigError,
+} from '../src/provider/event-contract.factory';
 
 describe('getEventContractProvider', () => {
   const originalEnv = process.env;

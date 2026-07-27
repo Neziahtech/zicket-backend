@@ -9,6 +9,9 @@ import {
   SendTicketPurchaseNotificationPayload,
   SendTicketUpdateNotificationPayload,
   SendEventCancellationNotificationPayload,
+  SendWaitlistSpotAvailablePayload,
+  WaitlistJobType,
+  ExpireHoldPayload,
   QUEUE_NAMES,
 } from '../config/queue-jobs';
 
@@ -19,6 +22,7 @@ import {
 class QueueService {
   private emailQueue: Queue | null = null;
   private zkEmailQueue: Queue | null = null;
+  private waitlistQueue: Queue | null = null;
   private emailWorker: Worker | null = null;
   private initialized = false;
 
@@ -42,6 +46,10 @@ class QueueService {
         ...queueConfig,
       });
 
+      this.waitlistQueue = new Queue(QUEUE_NAMES.WAITLIST, {
+        connection: redisConfig,
+        ...queueConfig,
+      });
       this.initialized = true;
       console.log('QueueService initialized successfully');
     } catch (error) {
@@ -241,6 +249,60 @@ class QueueService {
   }
 
   /**
+   * #168 - Enqueue a waitlist spot-available email notification
+   */
+  async enqueueWaitlistSpotAvailable(
+    payload: SendWaitlistSpotAvailablePayload,
+  ): Promise<string> {
+    if (!this.emailQueue) {
+      throw new Error('Queue not initialized');
+    }
+
+    const emailHash = crypto
+      .createHash('sha256')
+      .update(payload.userEmail)
+      .digest('hex')
+      .slice(0, 12);
+    const job = await this.emailQueue.add(
+      EmailJobType.SEND_WAITLIST_SPOT_AVAILABLE,
+      payload as EmailJobPayload,
+      {
+        jobId: `waitlist-${emailHash}-${Date.now()}`,
+      },
+    );
+
+    console.log(`Queued waitlist spot-available email, Job ID: ${job.id}`);
+    return job.id!;
+  }
+
+  /**
+   * #168 - Enqueue a delayed job to expire a waitlist hold if the user
+   * does not convert it into a purchase in time.
+   */
+  async enqueueExpireWaitlistHold(
+    waitlistId: string,
+    delayMs: number,
+  ): Promise<string> {
+    if (!this.waitlistQueue) {
+      throw new Error('Waitlist queue not initialized');
+    }
+
+    const job = await this.waitlistQueue.add(
+      WaitlistJobType.EXPIRE_HOLD,
+      { waitlistId } as ExpireHoldPayload,
+      {
+        jobId: `expire-hold-${waitlistId}`,
+        delay: delayMs,
+      },
+    );
+
+    console.log(
+      `Queued waitlist hold expiry for ${waitlistId} in ${delayMs}ms, Job ID: ${job.id}`,
+    );
+    return job.id!;
+  }
+
+  /**
    * Get queue statistics
    */
   async getQueueStats() {
@@ -267,6 +329,9 @@ class QueueService {
     }
     if (this.zkEmailQueue) {
       await this.zkEmailQueue.close();
+    }
+    if (this.waitlistQueue) {
+      await this.waitlistQueue.close();
     }
     if (this.emailWorker) {
       await this.emailWorker.close();

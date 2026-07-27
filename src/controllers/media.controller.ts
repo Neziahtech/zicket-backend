@@ -4,7 +4,10 @@ import { cloudinaryService } from '../lib/cloudinary';
 import Media from '../models/media';
 import EventTicket from '../models/event-ticket';
 
-async function verifyMediaOwnership(req: any, publicId: string): Promise<boolean> {
+async function verifyMediaOwnership(
+  req: any,
+  publicId: string,
+): Promise<boolean> {
   const userId = req.user?._id || req.user?.id;
   if (!userId) return false;
 
@@ -16,7 +19,9 @@ async function verifyMediaOwnership(req: any, publicId: string): Promise<boolean
     return true;
   }
 
-  const eventTicket = await EventTicket.findOne({ cloudinary_public_id: publicId });
+  const eventTicket = await EventTicket.findOne({
+    cloudinary_public_id: publicId,
+  });
   if (eventTicket && eventTicket.organizedBy.toString() === userId.toString()) {
     return true;
   }
@@ -37,7 +42,7 @@ export const uploadMedia: RequestHandler = async (req, res) => {
 
     const result = await MediaService.upload(req.file.buffer, { folder });
 
-    const userId = req.user?._id || req.user?.id;
+    const userId = (req.user as any)?._id || (req.user as any)?.id;
     if (userId) {
       try {
         await Media.findOneAndUpdate(
@@ -135,7 +140,7 @@ export const destroyMedia: RequestHandler = async (req, res) => {
   }
 };
 
-/** GET /media/signed-params — returns signed upload params for direct frontend upload to Cloudinary */
+/** GET /media/signed-params Ã¢â‚¬â€ returns signed upload params for direct frontend upload to Cloudinary */
 export const getSignedUploadParams: RequestHandler = async (_req, res) => {
   try {
     const params = cloudinaryService.getSignedUploadParams('events/tickets');

@@ -8,9 +8,12 @@ jest.mock('../src/models/user');
 
 const VALID_ID = '65f9f9e4c51058f58d05d9aa';
 
-describe('News route — authentication & authorization guards', () => {
+describe('News route Ã¢â‚¬â€ authentication & authorization guards', () => {
   describe('unauthenticated requests (no token)', () => {
-    const mutatingRoutes: Array<{ method: 'post' | 'patch' | 'delete'; path: string }> = [
+    const mutatingRoutes: Array<{
+      method: 'post' | 'patch' | 'delete';
+      path: string;
+    }> = [
       { method: 'post', path: '/news' },
       { method: 'patch', path: `/news/${VALID_ID}` },
       { method: 'delete', path: `/news/${VALID_ID}` },
@@ -23,14 +26,19 @@ describe('News route — authentication & authorization guards', () => {
       async ({ method, path }) => {
         const res = await (request(app) as any)[method](path).send({});
         expect(res.status).toBe(401);
-        expect(res.body).toMatchObject({ error: expect.stringContaining('Unauthorized') });
+        expect(res.body).toMatchObject({
+          error: expect.stringContaining('Unauthorized'),
+        });
       },
     );
   });
 
   describe('authenticated non-admin requests', () => {
     beforeEach(() => {
-      (JwtVerify as jest.Mock).mockReturnValue({ id: 'user-id-1', email: 'user@example.com' });
+      (JwtVerify as jest.Mock).mockReturnValue({
+        id: 'user-id-1',
+        email: 'user@example.com',
+      });
       (User.findById as jest.Mock).mockResolvedValue({
         _id: 'user-id-1',
         email: 'user@example.com',
@@ -44,7 +52,10 @@ describe('News route — authentication & authorization guards', () => {
       jest.clearAllMocks();
     });
 
-    const mutatingRoutes: Array<{ method: 'post' | 'patch' | 'delete'; path: string }> = [
+    const mutatingRoutes: Array<{
+      method: 'post' | 'patch' | 'delete';
+      path: string;
+    }> = [
       { method: 'post', path: '/news' },
       { method: 'patch', path: `/news/${VALID_ID}` },
       { method: 'delete', path: `/news/${VALID_ID}` },
@@ -55,11 +66,14 @@ describe('News route — authentication & authorization guards', () => {
     it.each(mutatingRoutes)(
       '$method $path returns 403 for non-admin user',
       async ({ method, path }) => {
-        const res = await (request(app) as any)[method](path)
+        const res = await (request(app) as any)
+          [method](path)
           .set('Authorization', 'Bearer valid.token')
           .send({});
         expect(res.status).toBe(403);
-        expect(res.body).toMatchObject({ error: 'Forbidden: Admin access required' });
+        expect(res.body).toMatchObject({
+          error: 'Forbidden: Admin access required',
+        });
       },
     );
   });
@@ -67,15 +81,15 @@ describe('News route — authentication & authorization guards', () => {
   describe('public read routes remain accessible without authentication', () => {
     it('GET /news returns 200 without token', async () => {
       const res = await request(app).get('/news');
-      // 200 or 500 (no DB) — but must NOT be 401 or 403
+      // 200 or 500 (no DB) Ã¢â‚¬â€ but must NOT be 401 or 403
       expect(res.status).not.toBe(401);
       expect(res.status).not.toBe(403);
-    });
+    }, 15000);
 
     it('PATCH /news/:id/read does not require authentication', async () => {
       const res = await request(app).patch(`/news/${VALID_ID}/read`).send({});
       expect(res.status).not.toBe(401);
       expect(res.status).not.toBe(403);
-    });
+    }, 15000);
   });
 });

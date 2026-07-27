@@ -2,7 +2,10 @@ import User from '../models/user';
 var jwt = require('jsonwebtoken');
 import { JwtVerify } from '../middlewares/jwt';
 
-const parseCookie = (cookieHeader: string | undefined, name: string): string | undefined => {
+const parseCookie = (
+  cookieHeader: string | undefined,
+  name: string,
+): string | undefined => {
   if (!cookieHeader) return undefined;
   const cookies = cookieHeader.split(';').map((c) => c.trim().split('='));
   const cookie = cookies.find(([key]) => key === name);
@@ -10,7 +13,11 @@ const parseCookie = (cookieHeader: string | undefined, name: string): string | u
 };
 
 const extractToken = (req: any): string | null => {
-  return req.headers.authorization?.split(' ')[1] || parseCookie(req.headers.cookie, 'token') || null;
+  return (
+    req.headers.authorization?.split(' ')[1] ||
+    parseCookie(req.headers.cookie, 'token') ||
+    null
+  );
 };
 
 const validateAndGetUser = async (token: string) => {

@@ -1,5 +1,8 @@
 import crypto from 'crypto';
-import { VerifyAndAttendResult, IEventContractProvider } from './event-contract.provider';
+import {
+  VerifyAndAttendResult,
+  IEventContractProvider,
+} from './event-contract.provider';
 
 /**
  * Dev/test fallback when EVENT_CONTRACT_ID is not configured.

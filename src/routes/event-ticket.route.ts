@@ -11,6 +11,11 @@ import {
   validateTicket,
 } from '../controllers/event-ticket.controller';
 import { getOrganizerBalance } from '../controllers/organizer-balance.controller';
+import {
+  joinWaitlist,
+  leaveWaitlist,
+  getWaitlistStatus,
+} from '../controllers/waitlist.controller';
 import { authGuard } from '../middlewares/auth';
 
 const eventTicketRoutes = Router();
@@ -55,6 +60,19 @@ eventTicketRoutes.patch(
   '/:eventId/update-step-two',
   authGuard,
   updateEventPrivacySettings,
+);
+
+// POST /api/event-tickets/:eventId/waitlist - Join the waitlist for a sold-out event
+eventTicketRoutes.post('/:eventId/waitlist', authGuard, joinWaitlist);
+
+// DELETE /api/event-tickets/:eventId/waitlist - Leave the waitlist / give up a held spot
+eventTicketRoutes.delete('/:eventId/waitlist', authGuard, leaveWaitlist);
+
+// GET /api/event-tickets/:eventId/waitlist/status - Current waitlist status + position
+eventTicketRoutes.get(
+  '/:eventId/waitlist/status',
+  authGuard,
+  getWaitlistStatus,
 );
 
 export default eventTicketRoutes;

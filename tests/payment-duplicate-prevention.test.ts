@@ -112,12 +112,10 @@ jest.mock('../src/models/user', () => ({
   default: {
     findById: jest.fn<any>().mockReturnValue({
       select: jest.fn<any>().mockReturnValue({
-        lean: jest
-          .fn<any>()
-          .mockResolvedValue({
-            _id: 'mock-user-id',
-            emailVerifiedAt: new Date(),
-          }),
+        lean: jest.fn<any>().mockResolvedValue({
+          _id: 'mock-user-id',
+          emailVerifiedAt: new Date(),
+        }),
       }),
     }),
   },

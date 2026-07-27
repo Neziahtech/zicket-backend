@@ -46,12 +46,10 @@ export const verifyCaptcha = async (
     const data = await response.json();
 
     if (!data.success) {
-      return res
-        .status(400)
-        .json({
-          error: 'Invalid captcha token.',
-          details: data['error-codes'],
-        });
+      return res.status(400).json({
+        error: 'Invalid captcha token.',
+        details: data['error-codes'],
+      });
     }
 
     return next();
