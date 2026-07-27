@@ -4,7 +4,10 @@ import {
   PaymentVerificationError,
   ServiceUnavailableError,
 } from '../errors/AppError';
-import { resolveExpectedPaymentBaseUnits } from './asset-pricing.service';
+import {
+  resolveExpectedPaymentBaseUnits,
+  isPricingConfigError,
+} from './asset-pricing.service';
 
 export interface VerifyRequest {
   txHash: string;
@@ -147,6 +150,11 @@ export class PaymentVerificationService {
       minAcceptable = resolved.minAcceptable;
       priceMeta = `${resolved.quote.usdPerAsset} USD/${resolved.quote.asset} (${resolved.quote.source}, tol=${resolved.config.toleranceBps}bps)`;
     } catch (err) {
+      if (isPricingConfigError(err)) {
+        throw new PaymentVerificationError(
+          `Payment verification failed due to pricing config: ${err.message}`,
+        );
+      }
       const detail = err instanceof Error ? err.message : String(err);
       throw new ServiceUnavailableError(
         `Payment verification pricing unavailable (${detail}). Configure PRICE_API_URL or FALLBACK_USD_PER_ASSET and retry.`,

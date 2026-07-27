@@ -24,10 +24,45 @@ export interface PricingConfig {
   fallbackUsdPerAsset: number | null;
 }
 
+/**
+ * Permanent config/input failure — not retryable.
+ * Callers should map this to PaymentVerificationError (422), not 503.
+ */
+export class PricingConfigError extends Error {
+  readonly isPricingConfigError = true as const;
+
+  constructor(message: string) {
+    super(message);
+    this.name = 'PricingConfigError';
+    Object.setPrototypeOf(this, new.target.prototype);
+  }
+}
+
+export function isPricingConfigError(err: unknown): err is PricingConfigError {
+  return (
+    err instanceof PricingConfigError ||
+    (typeof err === 'object' &&
+      err !== null &&
+      (err as { isPricingConfigError?: boolean }).isPricingConfigError === true)
+  );
+}
+
 const DEFAULT_ASSET = 'ETH';
 const DEFAULT_DECIMALS = 18;
 const DEFAULT_TOLERANCE_BPS = 100; // 1%
 const DEFAULT_CACHE_TTL_MS = 60_000;
+
+/** Shared CoinGecko id map — used by defaultPriceEndpoint + parseUsdFromBody. */
+export const COINGECKO_ID_MAP: Record<string, string> = {
+  ETH: 'ethereum',
+  WETH: 'weth',
+  XLM: 'stellar',
+  BTC: 'bitcoin',
+  MATIC: 'matic-network',
+  POL: 'matic-network',
+  USDC: 'usd-coin',
+  USDT: 'tether',
+};
 
 type CacheEntry = { quote: AssetPriceQuote; expiresAt: number };
 
@@ -81,17 +116,7 @@ export function getPricingConfig(): PricingConfig {
  * Override via PRICE_API_URL for custom tokens / oracles.
  */
 function defaultPriceEndpoint(asset: string): string {
-  const idMap: Record<string, string> = {
-    ETH: 'ethereum',
-    WETH: 'weth',
-    XLM: 'stellar',
-    BTC: 'bitcoin',
-    MATIC: 'matic-network',
-    POL: 'matic-network',
-    USDC: 'usd-coin',
-    USDT: 'tether',
-  };
-  const id = idMap[asset] || asset.toLowerCase();
+  const id = COINGECKO_ID_MAP[asset] || asset.toLowerCase();
   return `https://api.coingecko.com/api/v3/simple/price?ids=${encodeURIComponent(id)}&vs_currencies=usd`;
 }
 
@@ -107,13 +132,13 @@ function parseUsdFromBody(body: unknown, asset: string): number | null {
     return obj.price;
   }
 
-  // CoinGecko: { ethereum: { usd: 2500 } }
-  for (const key of Object.keys(obj)) {
-    const inner = obj[key];
-    if (inner && typeof inner === 'object') {
-      const usd = (inner as Record<string, unknown>).usd;
-      if (typeof usd === 'number' && usd > 0) return usd;
-    }
+  // CoinGecko: { ethereum: { usd: 2500 } } — only trust the entry that maps
+  // to the requested asset (by known id or symbol), not the first one found.
+  const coingeckoId = COINGECKO_ID_MAP[asset] || asset.toLowerCase();
+  const matched = obj[coingeckoId] ?? obj[asset] ?? obj[asset.toLowerCase()];
+  if (matched && typeof matched === 'object') {
+    const usd = (matched as Record<string, unknown>).usd;
+    if (typeof usd === 'number' && usd > 0) return usd;
   }
 
   // Flat { ETH: 2500 } keyed by symbol
@@ -202,6 +227,8 @@ export async function getUsdPerAsset(
  * using usdPerAsset and asset decimals.
  *
  * expectedBase = round(usd / usdPerAsset * 10^decimals)
+ *
+ * Always uses toFixed → BigInt path (no IEEE-754 float multiply).
  */
 export function usdToAssetBaseUnits(
   amountUsd: number,
@@ -209,34 +236,26 @@ export function usdToAssetBaseUnits(
   decimals: number,
 ): bigint {
   if (!(amountUsd >= 0) || !Number.isFinite(amountUsd)) {
-    throw new Error(`Invalid USD amount: ${amountUsd}`);
+    throw new PricingConfigError(`Invalid USD amount: ${amountUsd}`);
   }
   if (!(usdPerAsset > 0) || !Number.isFinite(usdPerAsset)) {
-    throw new Error(`Invalid USD-per-asset rate: ${usdPerAsset}`);
+    throw new PricingConfigError(`Invalid USD-per-asset rate: ${usdPerAsset}`);
   }
   if (!(decimals >= 0) || !Number.isFinite(decimals) || decimals > 36) {
-    throw new Error(`Invalid asset decimals: ${decimals}`);
+    throw new PricingConfigError(`Invalid asset decimals: ${decimals}`);
   }
 
-  // Use string math via Number carefully: for high-value tickets prefer
-  // scaled integer path to avoid float blow-ups on * 1e18.
-  // amount_in_whole_asset = amountUsd / usdPerAsset
-  // base = whole * 10^decimals
   const whole = amountUsd / usdPerAsset;
   if (!Number.isFinite(whole) || whole < 0) {
-    throw new Error(`USD→asset conversion produced non-finite value`);
+    throw new PricingConfigError(
+      `USD→asset conversion produced non-finite value`,
+    );
   }
 
-  // Split integer + fractional parts in base units
-  const factor = 10 ** decimals;
-  const raw = whole * factor;
-  if (!Number.isFinite(raw)) {
-    // Fallback: BigInt via string with fixed precision
-    const [i, f = ''] = whole.toFixed(decimals).split('.');
-    const frac = (f + '0'.repeat(decimals)).slice(0, decimals);
-    return BigInt(i) * BigInt(10 ** decimals) + BigInt(frac || '0');
-  }
-  return BigInt(Math.round(raw));
+  // Exact decimal path: avoid float * 10**decimals precision loss.
+  const [i, f = ''] = whole.toFixed(decimals).split('.');
+  const frac = (f + '0'.repeat(decimals)).slice(0, decimals);
+  return BigInt(i) * BigInt(10 ** decimals) + BigInt(frac || '0');
 }
 
 /**
@@ -266,6 +285,20 @@ export async function resolveExpectedPaymentBaseUnits(
   config: PricingConfig;
 }> {
   const config = getPricingConfig();
+  // Config validation before any network call — fail permanent, not 503.
+  if (!(amountUsd >= 0) || !Number.isFinite(amountUsd)) {
+    throw new PricingConfigError(`Invalid expectedAmountUsd: ${amountUsd}`);
+  }
+  if (
+    !(config.decimals >= 0) ||
+    !Number.isFinite(config.decimals) ||
+    config.decimals > 36
+  ) {
+    throw new PricingConfigError(
+      `Invalid PAYMENT_ASSET_DECIMALS: ${config.decimals}`,
+    );
+  }
+
   const quote = await getUsdPerAsset(assetOverride || config.asset);
   const expectedBaseUnits = usdToAssetBaseUnits(
     amountUsd,
