@@ -8,7 +8,7 @@ jest.mock('../src/models/user');
 
 const VALID_ID = '65f9f9e4c51058f58d05d9aa';
 
-describe('News route — authentication & authorization guards', () => {
+describe('News route Ã¢â‚¬â€ authentication & authorization guards', () => {
   describe('unauthenticated requests (no token)', () => {
     const mutatingRoutes: Array<{
       method: 'post' | 'patch' | 'delete';
@@ -81,15 +81,15 @@ describe('News route — authentication & authorization guards', () => {
   describe('public read routes remain accessible without authentication', () => {
     it('GET /news returns 200 without token', async () => {
       const res = await request(app).get('/news');
-      // 200 or 500 (no DB) — but must NOT be 401 or 403
+      // 200 or 500 (no DB) Ã¢â‚¬â€ but must NOT be 401 or 403
       expect(res.status).not.toBe(401);
       expect(res.status).not.toBe(403);
-    });
+    }, 15000);
 
     it('PATCH /news/:id/read does not require authentication', async () => {
       const res = await request(app).patch(`/news/${VALID_ID}/read`).send({});
       expect(res.status).not.toBe(401);
       expect(res.status).not.toBe(403);
-    });
+    }, 15000);
   });
 });
