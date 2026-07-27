@@ -10,6 +10,7 @@ import retentionWorker, {
   initializeRetentionWorker,
 } from './workers/retention.worker';
 import indexerWorker from './workers/indexer.worker';
+import waitlistWorker from './workers/waitlist.worker';
 
 async function startServer() {
   try {
@@ -18,48 +19,52 @@ async function startServer() {
 
     // Connect to MongoDB
     await mongoConnect();
-    console.log('✓ MongoDB connected');
+    console.log('âœ“ MongoDB connected');
 
     // Initialize queue service
     await queueService.initialize();
-    console.log('✓ Queue service initialized');
+    console.log('âœ“ Queue service initialized');
 
     // Initialize email worker
     await emailWorker.initialize();
-    console.log('✓ Email worker initialized');
+    console.log('âœ“ Email worker initialized');
 
     // Initialize zkEmail worker
     await zkEmailWorker.initialize();
-    console.log('✓ zkEmail worker initialized');
+    console.log('âœ“ zkEmail worker initialized');
 
     // Initialize indexer worker
     await indexerWorker.initialize();
-    console.log('✓ Indexer worker initialized');
+    console.log('âœ“ Indexer worker initialized');
 
     // Payment worker (processes webhook events via state machine)
-    console.log('✓ Payment worker initialized');
+    console.log('âœ“ Payment worker initialized');
 
     // Reconciliation worker (periodic stale-tx cleanup via state machine)
-    console.log('✓ Reconciliation worker initialized');
+    console.log('âœ“ Reconciliation worker initialized');
 
     // Retention worker (TTL hygiene + anonymization job retries)
     await initializeRetentionWorker();
-    console.log('✓ Retention worker initialized');
+    console.log('âœ“ Retention worker initialized');
+
+    await waitlistWorker.initialize();
+    console.log('Waitlist worker initialized');
 
     // Start Express server
     const server = app.listen(config.port, () => {
-      console.log(`✓ Server running on port ${config.port}`);
+      console.log(`âœ“ Server running on port ${config.port}`);
     });
 
     // Graceful shutdown
     const gracefulShutdown = async () => {
-      console.log('\n🛑 Shutting down gracefully...');
+      console.log('\nðŸ›‘ Shutting down gracefully...');
       server.close(async () => {
         console.log('Express server stopped');
         await emailWorker.close();
         await zkEmailWorker.close();
         await paymentWorker.close();
         await reconciliationWorker.close();
+        await waitlistWorker.close();
         await retentionWorker.close();
         await queueService.close();
         console.log('All services closed');

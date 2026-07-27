@@ -8,6 +8,7 @@ import {
   SendEmailPayload,
   SendTicketPurchaseNotificationPayload,
   SendTicketUpdateNotificationPayload,
+  SendWaitlistSpotAvailablePayload,
   EmailJobResult,
   QUEUE_NAMES,
 } from '../config/queue-jobs';
@@ -50,12 +51,12 @@ class EmailWorker {
 
       // Event handlers
       this.worker.on('completed', (job) => {
-        console.log(`✓ Email job ${job.id} completed successfully`);
+        console.log(`Ã¢Å“â€œ Email job ${job.id} completed successfully`);
       });
 
       this.worker.on('failed', (job, error) => {
         console.error(
-          `✗ Email job ${job?.id} failed (attempt ${job?.attemptsMade}/${job?.opts.attempts}):`,
+          `Ã¢Å“â€” Email job ${job?.id} failed (attempt ${job?.attemptsMade}/${job?.opts.attempts}):`,
           error.message,
         );
       });
@@ -110,6 +111,11 @@ class EmailWorker {
           result = await this.sendTicketUpdateNotification(
             payload as SendTicketUpdateNotificationPayload,
           );
+        case EmailJobType.SEND_WAITLIST_SPOT_AVAILABLE:
+          result = await this.sendWaitlistSpotAvailable(
+            payload as SendWaitlistSpotAvailablePayload,
+          );
+          break;
           break;
 
         default:
@@ -151,7 +157,7 @@ class EmailWorker {
         <body>
           <div class="container">
             <div class="header">
-              <h1>🎫 Zicket</h1>
+              <h1>Ã°Å¸Å½Â« Zicket</h1>
             </div>
             <div class="content">
               <h2>Verify your account</h2>
@@ -175,7 +181,7 @@ class EmailWorker {
 
       This code expires in 10 minutes. If you didn't create an account, you can ignore this email.
 
-      © ${new Date().getFullYear()} Zicket. All rights reserved.
+      Ã‚Â© ${new Date().getFullYear()} Zicket. All rights reserved.
     `;
 
     return this.sendEmail({
@@ -212,7 +218,7 @@ class EmailWorker {
         <body>
           <div class="container">
             <div class="header">
-              <h1>🎫 Zicket Login</h1>
+              <h1>Ã°Å¸Å½Â« Zicket Login</h1>
             </div>
             <div class="content">
               <h2>Magic Link Login</h2>
@@ -229,7 +235,7 @@ class EmailWorker {
               </p>
               
               <div class="warning">
-                <strong>⚠️ Security Notice:</strong>
+                <strong>Ã¢Å¡Â Ã¯Â¸Â Security Notice:</strong>
                 <ul>
                   <li>This link expires in 15 minutes</li>
                   <li>It can only be used once</li>
@@ -262,7 +268,7 @@ class EmailWorker {
       - If you didn't request this, please ignore this email
       
       This is an automated email from Zicket. Please do not reply.
-      © ${new Date().getFullYear()} Zicket. All rights reserved.
+      Ã‚Â© ${new Date().getFullYear()} Zicket. All rights reserved.
     `;
 
     return this.sendEmail({
@@ -313,7 +319,7 @@ class EmailWorker {
         <body>
           <div class="container">
             <div class="header">
-              <h1>🎫 Purchase Confirmation</h1>
+              <h1>Ã°Å¸Å½Â« Purchase Confirmation</h1>
             </div>
             <div class="content">
               <h2>Thank you, ${userName}!</h2>
@@ -373,7 +379,7 @@ class EmailWorker {
       If you have any questions, please contact the event organizer or support team.
       
       This is an automated email from Zicket. Please do not reply.
-      © ${new Date().getFullYear()} Zicket. All rights reserved.
+      Ã‚Â© ${new Date().getFullYear()} Zicket. All rights reserved.
     `;
 
     return this.sendEmail({
@@ -422,7 +428,7 @@ class EmailWorker {
         <body>
           <div class="container">
             <div class="header">
-              <h1>🎫 Ticket Status Update</h1>
+              <h1>Ã°Å¸Å½Â« Ticket Status Update</h1>
             </div>
             <div class="content">
               <h2>Hello, ${userName}!</h2>
@@ -476,7 +482,7 @@ class EmailWorker {
       If you have any questions, please contact support.
       
       This is an automated email from Zicket. Please do not reply.
-      © ${new Date().getFullYear()} Zicket. All rights reserved.
+      Ã‚Â© ${new Date().getFullYear()} Zicket. All rights reserved.
     `;
 
     return this.sendEmail({
@@ -519,6 +525,82 @@ class EmailWorker {
     if (this.worker) {
       await this.worker.close();
       console.log('Email worker closed');
+    }
+  }
+
+  /**
+   * #168 - Send waitlist spot-available notification email
+   */
+  private async sendWaitlistSpotAvailable(
+    payload: SendWaitlistSpotAvailablePayload,
+  ): Promise<EmailJobResult> {
+    const { userEmail, userName, eventName, holdMinutes } = payload;
+
+    const html = `
+      <html>
+        <head>
+          <style>
+            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+            .header { background-color: #4F46E5; color: white; padding: 20px; text-align: center; border-radius: 5px 5px 0 0; }
+            .content { background-color: #f9f9f9; padding: 30px; border-radius: 0 0 5px 5px; }
+            .button { display: inline-block; padding: 12px 30px; background-color: #4F46E5; color: white; text-decoration: none; border-radius: 5px; margin: 20px 0; }
+            .footer { text-align: center; margin-top: 20px; font-size: 12px; color: #666; }
+            .warning { background-color: #FEF3C7; padding: 15px; border-left: 4px solid #F59E0B; margin: 20px 0; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <h1>A spot opened up!</h1>
+            </div>
+            <div class="content">
+              <h2>${eventName}</h2>
+              <p>Hi ${userName},</p>
+              <p>Good news - a ticket just freed up for <strong>${eventName}</strong>, and you're next on the waitlist!</p>
+
+              <div class="warning">
+                <strong>Act fast:</strong>
+                <ul>
+                  <li>This spot is held for you for the next ${holdMinutes} minutes</li>
+                  <li>If you don't complete your purchase in time, it moves to the next person in line</li>
+                </ul>
+              </div>
+
+              <p>Head back to the event page to grab your ticket now.</p>
+            </div>
+            <div class="footer">
+              <p>This is an automated email from Zicket. Please do not reply.</p>
+              <p>&copy; ${new Date().getFullYear()} Zicket. All rights reserved.</p>
+            </div>
+          </div>
+        </body>
+      </html>
+    `;
+
+    const text = `Hi ${userName}, a spot opened up for ${eventName}! You have ${holdMinutes} minutes to claim it before it moves to the next person on the waitlist.`;
+
+    try {
+      const info = await this.transporter.sendMail({
+        from: process.env.EMAIL_FROM || 'noreply@zicket.com',
+        to: userEmail,
+        subject: `A spot opened up for ${eventName}!`,
+        html,
+        text,
+      });
+
+      return {
+        success: true,
+        messageId: info.messageId,
+        timestamp: new Date(),
+      };
+    } catch (error: any) {
+      console.error('Error sending waitlist spot-available email:', error.message);
+      return {
+        success: false,
+        error: error.message,
+        timestamp: new Date(),
+      };
     }
   }
 }
