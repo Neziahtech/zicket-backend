@@ -4,6 +4,7 @@ import {
   PaymentVerificationError,
   ServiceUnavailableError,
 } from '../errors/AppError';
+import { resolveExpectedPaymentBaseUnits } from './asset-pricing.service';
 
 export interface VerifyRequest {
   txHash: string;
@@ -134,19 +135,32 @@ export class PaymentVerificationService {
       );
     }
 
-    // ── 5. Value check ────────────────────────────────────────────────────────
-    // Convert ETH-denominated expected amount to wei for comparison.
-    // 1 ETH = 1e18 wei; expectedAmountUsd is treated as ETH here.
-    // In production swap in a price oracle for USD→ETH conversion.
-    const expectedWei = BigInt(Math.round(expectedAmountUsd * 1e18));
-    if (chainTx.valueWei < expectedWei) {
+    // ── 5. Value check (USD → payment-asset base units via live/cached rate) ──
+    // Replaces the previous hardcoded assumption that 1 USD == 1 whole asset
+    // unit (expectedAmountUsd * 1e18). Rate is asset-agnostic (PAYMENT_ASSET).
+    let expectedWei: bigint;
+    let minAcceptable: bigint;
+    let priceMeta: string;
+    try {
+      const resolved = await resolveExpectedPaymentBaseUnits(expectedAmountUsd);
+      expectedWei = resolved.expectedBaseUnits;
+      minAcceptable = resolved.minAcceptable;
+      priceMeta = `${resolved.quote.usdPerAsset} USD/${resolved.quote.asset} (${resolved.quote.source}, tol=${resolved.config.toleranceBps}bps)`;
+    } catch (err) {
+      const detail = err instanceof Error ? err.message : String(err);
+      throw new ServiceUnavailableError(
+        `Payment verification pricing unavailable (${detail}). Configure PRICE_API_URL or FALLBACK_USD_PER_ASSET and retry.`,
+      );
+    }
+
+    if (chainTx.valueWei < minAcceptable) {
       throw new PaymentVerificationError(
-        `Transaction ${txHash} transferred ${chainTx.valueWei} wei but ${expectedWei} wei was expected for order ${orderRef}.`,
+        `Transaction ${txHash} transferred ${chainTx.valueWei} base units but at least ${minAcceptable} (expected ${expectedWei} @ ${priceMeta}) was required for order ${orderRef}.`,
       );
     }
 
     console.info(
-      `[PaymentVerificationService] Verified tx=${txHash} for order=${orderRef}: ${chainTx.confirmations} confirmations, value=${chainTx.valueWei} wei.`,
+      `[PaymentVerificationService] Verified tx=${txHash} for order=${orderRef}: ${chainTx.confirmations} confirmations, value=${chainTx.valueWei} base units, price=${priceMeta}.`,
     );
 
     return {
