@@ -8,14 +8,19 @@ describe('validateSchema middleware', () => {
   });
 
   it('calls next() and replaces req.body with parsed data on success', () => {
-    const req: any = { body: { email: 'test@example.com', password: 'secret123' } };
+    const req: any = {
+      body: { email: 'test@example.com', password: 'secret123' },
+    };
     const res = createRes();
     const next = jest.fn();
 
     validateSchema(LoginSchema)(req, res as any, next);
 
     expect(next).toHaveBeenCalledWith();
-    expect(req.body).toEqual({ email: 'test@example.com', password: 'secret123' });
+    expect(req.body).toEqual({
+      email: 'test@example.com',
+      password: 'secret123',
+    });
   });
 
   it('calls next(error) with a ZodError when a required field is missing', () => {
@@ -79,7 +84,11 @@ describe('validateSchema middleware', () => {
 
   it('validates the signup schema and rejects a NoSQL injection payload in name', () => {
     const req: any = {
-      body: { name: { $ne: null }, email: 'test@example.com', password: 'secret123' },
+      body: {
+        name: { $ne: null },
+        email: 'test@example.com',
+        password: 'secret123',
+      },
     };
     const res = createRes();
     const next = jest.fn();
@@ -94,7 +103,9 @@ describe('validateSchema middleware', () => {
     const req: any = { params: { id: 'invalid' } };
     const res = createRes();
     const next = jest.fn();
-    const IdSchema = require('zod').z.object({ id: require('zod').z.string().uuid() });
+    const IdSchema = require('zod').z.object({
+      id: require('zod').z.string().uuid(),
+    });
 
     validateSchema(IdSchema, 'params')(req, res as any, next);
 

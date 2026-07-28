@@ -18,9 +18,19 @@ dotenv.config();
 
 const authRoute = express.Router();
 
-authRoute.post('/signup', getLimiter('signup'), signupController);
+authRoute.post(
+  '/signup',
+  getLimiter('signup'),
+  validateSchema(SignupSchema),
+  signupController,
+);
 
-authRoute.post('/login', getLimiter('login'), loginController);
+authRoute.post(
+  '/login',
+  getLimiter('login'),
+  validateSchema(LoginSchema),
+  loginController,
+);
 
 authRoute.post('/verify-account', getLimiter('otp'), verifyAccountController);
 
