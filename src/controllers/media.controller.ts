@@ -125,7 +125,11 @@ export const destroyMedia: RequestHandler = async (req, res, next) => {
 };
 
 /** GET /media/signed-params - returns a signed Cloudinary upload payload */
-export const getSignedUploadParams: RequestHandler = async (_req, res, next) => {
+export const getSignedUploadParams: RequestHandler = async (
+  _req,
+  res,
+  next,
+) => {
   try {
     const params = cloudinaryService.getSignedUploadParams('events/tickets');
     res.status(200).json({

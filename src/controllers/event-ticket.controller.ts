@@ -34,7 +34,11 @@ export const getEventTickets: RequestHandler = async (req, res, next) => {
   }
 };
 
-export const getEventTicketsByCategory: RequestHandler = async (req, res, next) => {
+export const getEventTicketsByCategory: RequestHandler = async (
+  req,
+  res,
+  next,
+) => {
   try {
     const category = req.params.category as string;
     const page = parseInt(req.query.page as string, 10) || 1;
@@ -66,7 +70,11 @@ export const getEventTicketsByCategory: RequestHandler = async (req, res, next) 
   }
 };
 
-export const getTrendingEventTickets: RequestHandler = async (req, res, next) => {
+export const getTrendingEventTickets: RequestHandler = async (
+  req,
+  res,
+  next,
+) => {
   try {
     const result = await EventTicketService.getTrendingEventTickets();
 

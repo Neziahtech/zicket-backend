@@ -10,7 +10,7 @@ function validateCreateMessageBody(
   body: unknown,
 ):
   | { valid: false; error: string }
-  | { valid: true; payload: CreateMessagePayload } { 
+  | { valid: true; payload: CreateMessagePayload } {
   if (!body || typeof body !== 'object') {
     return { valid: false, error: 'Request body must be a JSON object' };
   }
