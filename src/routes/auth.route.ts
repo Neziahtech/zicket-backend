@@ -1,5 +1,7 @@
 import express from 'express';
 import { signupController } from '../controllers/signup.controller';
+import { validateSchema } from '../middlewares/validator';
+import { SignupSchema, LoginSchema } from '../validators/auth.validator';
 import { loginController } from '../controllers/login.controller';
 import { resendOtpController } from '../controllers/resendotp.controller';
 import { verifyAccountController } from '../controllers/verify.controller';
