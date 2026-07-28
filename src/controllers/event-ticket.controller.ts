@@ -7,7 +7,7 @@ import {
 import { UserAuthenticatedReq } from '../utils/types';
 import { PaymentPrivacyDisclosureService } from '../services/payment-privacy-disclosure.service';
 
-export const getEventTickets: RequestHandler = async (req, res) => {
+export const getEventTickets: RequestHandler = async (req, res, next) => {
   try {
     const page = parseInt(req.query.page as string, 10) || 1;
     const limit = parseInt(req.query.limit as string, 10) || 8;
@@ -30,19 +30,11 @@ export const getEventTickets: RequestHandler = async (req, res) => {
 
     res.status(200).json(result);
   } catch (error) {
-    console.error('Error fetching event tickets:', error);
-
-    res.status(500).json({
-      error: 'Internal server error',
-      message:
-        error instanceof Error
-          ? error.message
-          : 'Failed to fetch event tickets',
-    });
+    next(error);
   }
 };
 
-export const getEventTicketsByCategory: RequestHandler = async (req, res) => {
+export const getEventTicketsByCategory: RequestHandler = async (req, res, next) => {
   try {
     const category = req.params.category as string;
     const page = parseInt(req.query.page as string, 10) || 1;
@@ -70,33 +62,17 @@ export const getEventTicketsByCategory: RequestHandler = async (req, res) => {
 
     res.status(200).json(result);
   } catch (error) {
-    console.error('Error fetching event tickets by category:', error);
-
-    res.status(500).json({
-      error: 'Internal server error',
-      message:
-        error instanceof Error
-          ? error.message
-          : 'Failed to fetch event tickets by category',
-    });
+    next(error);
   }
 };
 
-export const getTrendingEventTickets: RequestHandler = async (req, res) => {
+export const getTrendingEventTickets: RequestHandler = async (req, res, next) => {
   try {
     const result = await EventTicketService.getTrendingEventTickets();
 
     res.status(200).json(result);
   } catch (error) {
-    console.error('Error fetching trending event tickets:', error);
-
-    res.status(500).json({
-      error: 'Internal server error',
-      message:
-        error instanceof Error
-          ? error.message
-          : 'Failed to fetch trending event tickets',
-    });
+    next(error);
   }
 };
 
@@ -107,6 +83,7 @@ export const getTrendingEventTickets: RequestHandler = async (req, res) => {
 export const createEventWithPrivacySettings: RequestHandler = async (
   req: UserAuthenticatedReq,
   res,
+  next,
 ) => {
   try {
     // Validate request body
@@ -203,13 +180,7 @@ export const createEventWithPrivacySettings: RequestHandler = async (
       });
     }
 
-    res.status(500).json({
-      error: 'Internal server error',
-      message:
-        error instanceof Error
-          ? error.message
-          : 'Failed to create event with privacy settings',
-    });
+    next(error);
   }
 };
 
@@ -220,6 +191,7 @@ export const createEventWithPrivacySettings: RequestHandler = async (
 export const updateEventPrivacySettings: RequestHandler = async (
   req: UserAuthenticatedReq,
   res,
+  next,
 ) => {
   try {
     const eventId = Array.isArray(req.params.eventId)
@@ -307,13 +279,7 @@ export const updateEventPrivacySettings: RequestHandler = async (
       });
     }
 
-    res.status(500).json({
-      error: 'Internal server error',
-      message:
-        error instanceof Error
-          ? error.message
-          : 'Failed to update event privacy settings',
-    });
+    next(error);
   }
 };
 
@@ -321,7 +287,7 @@ export const updateEventPrivacySettings: RequestHandler = async (
  * Gets a single event by ID
  * GET /api/event-tickets/:eventId
  */
-export const getEventById: RequestHandler = async (req, res) => {
+export const getEventById: RequestHandler = async (req, res, next) => {
   try {
     const eventId = Array.isArray(req.params.eventId)
       ? req.params.eventId[0]
@@ -381,16 +347,12 @@ export const getEventById: RequestHandler = async (req, res) => {
         updatedAt: (event as any).updatedAt,
       },
     });
-  } catch (error: any) {
-    console.error('Error fetching event:', error);
-    res.status(500).json({
-      error: 'Internal server error',
-      message: error instanceof Error ? error.message : 'Failed to fetch event',
-    });
+  } catch (error) {
+    next(error);
   }
 };
 
-export const searchEventTickets: RequestHandler = async (req, res) => {
+export const searchEventTickets: RequestHandler = async (req, res, next) => {
   try {
     // Extract search query and pagination parameters
     const query = ((req.query.q as string) || '').trim();
@@ -550,16 +512,7 @@ export const searchEventTickets: RequestHandler = async (req, res) => {
     // Return success response
     res.status(200).json(result);
   } catch (error) {
-    console.error('Error searching event tickets: ', error);
-
-    // Return error response
-    res.status(500).json({
-      error: 'Internal server error',
-      message:
-        error instanceof Error
-          ? error.message
-          : 'Failed to search event tickets',
-    });
+    next(error);
   }
 };
 
@@ -571,6 +524,7 @@ export const searchEventTickets: RequestHandler = async (req, res) => {
 export const scanTicket: RequestHandler = async (
   req: UserAuthenticatedReq,
   res,
+  next,
 ) => {
   try {
     const { ticketId } = req.body;
@@ -621,12 +575,7 @@ export const scanTicket: RequestHandler = async (
       data: result.ticket,
     });
   } catch (error) {
-    console.error('Error scanning ticket:', error);
-
-    res.status(500).json({
-      error: 'Internal server error',
-      message: error instanceof Error ? error.message : 'Failed to scan ticket',
-    });
+    next(error);
   }
 };
 
@@ -637,6 +586,7 @@ export const scanTicket: RequestHandler = async (
 export const validateTicket: RequestHandler = async (
   req: UserAuthenticatedReq,
   res,
+  next,
 ) => {
   try {
     const { ticketId } = req.body;
@@ -687,12 +637,6 @@ export const validateTicket: RequestHandler = async (
       data: result.ticket,
     });
   } catch (error) {
-    console.error('Error validating ticket:', error);
-
-    res.status(500).json({
-      error: 'Internal server error',
-      message:
-        error instanceof Error ? error.message : 'Failed to validate ticket',
-    });
+    next(error);
   }
 };

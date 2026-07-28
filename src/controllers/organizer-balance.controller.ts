@@ -13,6 +13,7 @@ import { AppError } from '../errors/AppError';
 export const getOrganizerBalance: RequestHandler = async (
   req: UserAuthenticatedReq,
   res,
+  next,
 ) => {
   try {
     const userId = req.user?._id || (req.user as { id?: string })?.id;
@@ -92,9 +93,6 @@ export const getOrganizerBalance: RequestHandler = async (
       });
     }
 
-    return res.status(500).json({
-      error: 'Internal server error',
-      message: 'Failed to fetch organizer balance',
-    });
+    return next(error);
   }
 };

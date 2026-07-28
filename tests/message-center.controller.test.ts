@@ -154,26 +154,20 @@ describe('message-center controller', () => {
       expect(res.status).toHaveBeenCalledWith(201);
     });
 
-    it('returns 500 when createMessage throws', async () => {
-      const consoleSpy = jest
-        .spyOn(console, 'error')
-        .mockImplementation(() => {});
+    it('calls next(error) when createMessage throws', async () => {
       const req = {
         body: { audience: ['a'], title: 'Hi', content: 'Content' },
       };
       const res = createResponse();
+      const next = jest.fn();
       messageCenterService.createMessage.mockRejectedValue(
         new Error('Database error'),
       );
 
-      await sendMessage(req as any, res as any, jest.fn());
+      await sendMessage(req as any, res as any, next);
 
-      consoleSpy.mockRestore();
-      expect(res.status).toHaveBeenCalledWith(500);
-      expect(res.json).toHaveBeenCalledWith({
-        error: 'Internal server error',
-        message: 'Database error',
-      });
+      expect(next).toHaveBeenCalledWith(expect.any(Error));
+      expect(res.status).not.toHaveBeenCalled();
     });
   });
 
@@ -243,29 +237,23 @@ describe('message-center controller', () => {
     expect(res.json).toHaveBeenCalledWith(serviceResult);
   });
 
-  it('returns 500 when scheduled messages service throws', async () => {
-    const consoleSpy = jest
-      .spyOn(console, 'error')
-      .mockImplementation(() => {});
+  it('calls next(error) when scheduled messages service throws', async () => {
     const req = {
       query: {
         page: '1',
       },
     };
     const res = createResponse();
+    const next = jest.fn();
 
     messageCenterService.getScheduledMessages.mockRejectedValue(
       new Error('db down'),
     );
 
-    await getScheduledMessages(req as any, res as any, jest.fn());
+    await getScheduledMessages(req as any, res as any, next);
 
-    consoleSpy.mockRestore();
-    expect(res.status).toHaveBeenCalledWith(500);
-    expect(res.json).toHaveBeenCalledWith({
-      error: 'Internal server error',
-      message: 'db down',
-    });
+    expect(next).toHaveBeenCalledWith(expect.any(Error));
+    expect(res.status).not.toHaveBeenCalled();
   });
 
   describe('editMessage', () => {

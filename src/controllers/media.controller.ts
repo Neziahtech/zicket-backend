@@ -29,7 +29,7 @@ async function verifyMediaOwnership(
   return false;
 }
 
-export const uploadMedia: RequestHandler = async (req, res) => {
+export const uploadMedia: RequestHandler = async (req, res, next) => {
   try {
     if (!req.file) {
       return res.status(400).json({
@@ -60,15 +60,11 @@ export const uploadMedia: RequestHandler = async (req, res) => {
       data: result,
     });
   } catch (error) {
-    console.error('Media upload error:', error);
-    res.status(500).json({
-      error: 'Upload failed',
-      message: error instanceof Error ? error.message : 'Failed to upload file',
-    });
+    next(error);
   }
 };
 
-export const invalidateMedia: RequestHandler = async (req, res) => {
+export const invalidateMedia: RequestHandler = async (req, res, next) => {
   try {
     const { publicId } = req.body;
 
@@ -94,18 +90,11 @@ export const invalidateMedia: RequestHandler = async (req, res) => {
       data: result,
     });
   } catch (error) {
-    console.error('Media invalidation error:', error);
-    res.status(500).json({
-      error: 'Invalidation failed',
-      message:
-        error instanceof Error
-          ? error.message
-          : 'Failed to invalidate resource',
-    });
+    next(error);
   }
 };
 
-export const destroyMedia: RequestHandler = async (req, res) => {
+export const destroyMedia: RequestHandler = async (req, res, next) => {
   try {
     const { publicId } = req.body;
 
@@ -131,17 +120,12 @@ export const destroyMedia: RequestHandler = async (req, res) => {
       data: result,
     });
   } catch (error) {
-    console.error('Media destroy error:', error);
-    res.status(500).json({
-      error: 'Deletion failed',
-      message:
-        error instanceof Error ? error.message : 'Failed to delete resource',
-    });
+    next(error);
   }
 };
 
-/** GET /media/signed-params Ã¢â‚¬â€ returns signed upload params for direct frontend upload to Cloudinary */
-export const getSignedUploadParams: RequestHandler = async (_req, res) => {
+/** GET /media/signed-params - returns a signed Cloudinary upload payload */
+export const getSignedUploadParams: RequestHandler = async (_req, res, next) => {
   try {
     const params = cloudinaryService.getSignedUploadParams('events/tickets');
     res.status(200).json({
@@ -149,13 +133,6 @@ export const getSignedUploadParams: RequestHandler = async (_req, res) => {
       data: params,
     });
   } catch (error) {
-    console.error('Signed params error:', error);
-    res.status(500).json({
-      error: 'Failed to generate signed params',
-      message:
-        error instanceof Error
-          ? error.message
-          : 'Failed to generate signed params',
-    });
+    next(error);
   }
 };

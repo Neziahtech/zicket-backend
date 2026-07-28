@@ -12,7 +12,7 @@ import { AttendanceNullifierPepperError } from '../utils/attendance-nullifier-di
  * POST /events/:id/verify-attend
  * Anonymous zkPassport proof submission for verified-access events (#121).
  */
-export const verifyAttend: RequestHandler = async (req, res) => {
+export const verifyAttend: RequestHandler = async (req, res, next) => {
   try {
     const eventId = Array.isArray(req.params.id)
       ? req.params.id[0]
@@ -64,11 +64,6 @@ export const verifyAttend: RequestHandler = async (req, res) => {
       });
     }
 
-    console.error('[VerifyAttend] unexpected error:', error);
-    res.status(500).json({
-      success: false,
-      error: 'INTERNAL_ERROR',
-      message: 'Attendance verification is temporarily unavailable.',
-    });
+    next(error);
   }
 };

@@ -13,6 +13,7 @@ import EventTicket from '../models/event-ticket';
 export const getUserOrders: RequestHandler = async (
   req: UserAuthenticatedReq,
   res,
+  next,
 ) => {
   try {
     const userId = req.user?._id || (req.user as any)?.id;
@@ -38,20 +39,14 @@ export const getUserOrders: RequestHandler = async (
       data: result,
     });
   } catch (error) {
-    console.error('Error fetching user ticket orders:', error);
-    res.status(500).json({
-      error: 'Internal server error',
-      message:
-        error instanceof Error
-          ? error.message
-          : 'Failed to fetch user ticket orders',
-    });
+    next(error);
   }
 };
 
 export const getOrganizerOrders: RequestHandler = async (
   req: UserAuthenticatedReq,
   res,
+  next,
 ) => {
   try {
     const userId = req.user?._id || (req.user as any)?.id;
@@ -77,19 +72,12 @@ export const getOrganizerOrders: RequestHandler = async (
       data: result,
     });
   } catch (error) {
-    console.error('Error fetching organizer ticket orders:', error);
-    res.status(500).json({
-      error: 'Internal server error',
-      message:
-        error instanceof Error
-          ? error.message
-          : 'Failed to fetch organizer ticket orders',
-    });
+    next(error);
   }
 };
 
 /**
- * #75 — Verify a blockchain payment and issue a ticket.
+ * #75 Ã¢â‚¬â€ Verify a blockchain payment and issue a ticket.
  *
  * POST /api/ticket-orders/verify-payment
  * Body: { txHash, eventTicketId, ticketType, quantity, expectedAmount }
@@ -97,6 +85,7 @@ export const getOrganizerOrders: RequestHandler = async (
 export const verifyPayment: RequestHandler = async (
   req: UserAuthenticatedReq,
   res,
+  next,
 ) => {
   try {
     const userId = req.user?._id || (req.user as any)?.id;
@@ -114,7 +103,7 @@ export const verifyPayment: RequestHandler = async (
       req.body.privacyAcknowledged === true ||
       req.body.privacyAcknowledged === 'true';
 
-    // ── Input validation ──────────────────────────────────────────────────────
+    // Ã¢â€â‚¬Ã¢â€â‚¬ Input validation Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
     if (!txHash || typeof txHash !== 'string' || txHash.trim() === '') {
       return res.status(400).json({
         error: 'Validation failed',
@@ -152,7 +141,7 @@ export const verifyPayment: RequestHandler = async (
       });
     }
 
-    // ── Payment verification ──────────────────────────────────────────────────
+    // Ã¢â€â‚¬Ã¢â€â‚¬ Payment verification Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
     const idempotencyKey = getIdempotencyKey(req);
     const result = await PaymentVerificationService.verifyAndIssueTicket(
       txHash.trim(),
@@ -184,12 +173,7 @@ export const verifyPayment: RequestHandler = async (
       },
     });
   } catch (error) {
-    console.error('[TicketOrderController] verifyPayment error:', error);
-    res.status(500).json({
-      error: 'Internal server error',
-      message:
-        error instanceof Error ? error.message : 'Payment verification failed',
-    });
+    next(error);
   }
 };
 
@@ -200,6 +184,7 @@ export const verifyPayment: RequestHandler = async (
 export const updateTicketOrderStatus: RequestHandler = async (
   req: UserAuthenticatedReq,
   res,
+  next,
 ) => {
   try {
     const userId = req.user?._id || (req.user as any)?.id;
@@ -272,13 +257,6 @@ export const updateTicketOrderStatus: RequestHandler = async (
       },
     });
   } catch (error) {
-    console.error('Error updating ticket order status:', error);
-    res.status(500).json({
-      error: 'Internal server error',
-      message:
-        error instanceof Error
-          ? error.message
-          : 'Failed to update ticket order status',
-    });
+    next(error);
   }
 };

@@ -13,7 +13,7 @@ import {
  * Soft delete a news article by ID
  * DELETE /api/news/:id
  */
-export const deleteNewsById: RequestHandler = async (req, res) => {
+export const deleteNewsById: RequestHandler = async (req, res, next) => {
   try {
     const id = req.params.id as string;
 
@@ -35,8 +35,6 @@ export const deleteNewsById: RequestHandler = async (req, res) => {
       },
     });
   } catch (error) {
-    console.error('Error deleting news article:', error);
-
     if (error instanceof Error) {
       if (error.message.includes('Invalid news ID format')) {
         return res
@@ -55,13 +53,7 @@ export const deleteNewsById: RequestHandler = async (req, res) => {
       }
     }
 
-    return res.status(500).json({
-      error: 'Internal server error',
-      message:
-        error instanceof Error
-          ? error.message
-          : 'Failed to delete news article',
-    });
+    next(error);
   }
 };
 
@@ -69,7 +61,7 @@ export const deleteNewsById: RequestHandler = async (req, res) => {
  * Create a news article
  * POST /api/news
  */
-export const createNews: RequestHandler = async (req, res) => {
+export const createNews: RequestHandler = async (req, res, next) => {
   try {
     const parsed = CreateNewsSchema.safeParse(req.body);
 
@@ -92,8 +84,6 @@ export const createNews: RequestHandler = async (req, res) => {
       data: news,
     });
   } catch (error) {
-    console.error('Error creating news article:', error);
-
     if (error instanceof ZodError) {
       return res.status(400).json({
         error: 'Validation failed',
@@ -101,17 +91,11 @@ export const createNews: RequestHandler = async (req, res) => {
       });
     }
 
-    return res.status(500).json({
-      error: 'Internal server error',
-      message:
-        error instanceof Error
-          ? error.message
-          : 'Failed to create news article',
-    });
+    next(error);
   }
 };
 
-export const updateNews: RequestHandler = async (req, res) => {
+export const updateNews: RequestHandler = async (req, res, next) => {
   try {
     const paramParsed = NewsIdParamSchema.safeParse(req.params);
     if (!paramParsed.success) {
@@ -151,15 +135,10 @@ export const updateNews: RequestHandler = async (req, res) => {
       data: updated,
     });
   } catch (error) {
-    console.error('Error updating news article:', error);
-
     if (error instanceof NewsNotFoundError) {
       return res.status(404).json({
         error: 'Not found',
-        message:
-          error instanceof Error
-            ? error.message
-            : 'Failed to update news article',
+        message: error.message,
       });
     }
 
@@ -169,6 +148,8 @@ export const updateNews: RequestHandler = async (req, res) => {
         messages: z.treeifyError(error),
       });
     }
+
+    next(error);
   }
 };
 
@@ -179,6 +160,7 @@ export const updateNews: RequestHandler = async (req, res) => {
 export const hardDeleteNewsById: RequestHandler = async (
   req: Request,
   res: Response,
+  next,
 ) => {
   try {
     const id = req.params.id as string;
@@ -198,8 +180,6 @@ export const hardDeleteNewsById: RequestHandler = async (
       data: { newsId: result.newsId },
     });
   } catch (error) {
-    console.error('Error hard deleting news article:', error);
-
     if (error instanceof Error) {
       if (error.message.includes('Invalid news ID format')) {
         return res
@@ -218,13 +198,7 @@ export const hardDeleteNewsById: RequestHandler = async (
       }
     }
 
-    return res.status(500).json({
-      error: 'Internal server error',
-      message:
-        error instanceof Error
-          ? error.message
-          : 'Failed to hard delete news article',
-    });
+    next(error);
   }
 };
 
@@ -232,7 +206,7 @@ export const hardDeleteNewsById: RequestHandler = async (
  * Restore a soft-deleted news article
  * PATCH /api/news/:id/restore
  */
-export const restoreNewsById: RequestHandler = async (req, res) => {
+export const restoreNewsById: RequestHandler = async (req, res, next) => {
   try {
     const id = req.params.id as string;
 
@@ -251,8 +225,6 @@ export const restoreNewsById: RequestHandler = async (req, res) => {
       data: { newsId: result.newsId },
     });
   } catch (error) {
-    console.error('Error restoring news article:', error);
-
     if (error instanceof Error) {
       if (error.message.includes('Invalid news ID format')) {
         return res
@@ -271,17 +243,11 @@ export const restoreNewsById: RequestHandler = async (req, res) => {
       }
     }
 
-    return res.status(500).json({
-      error: 'Internal server error',
-      message:
-        error instanceof Error
-          ? error.message
-          : 'Failed to restore news article',
-    });
+    next(error);
   }
 };
 
-export const getAllNews: RequestHandler = async (req, res) => {
+export const getAllNews: RequestHandler = async (req, res, next) => {
   try {
     const pageParam = req.query.page as string;
     const limitParam = req.query.limit as string;
@@ -332,17 +298,11 @@ export const getAllNews: RequestHandler = async (req, res) => {
       },
     });
   } catch (error) {
-    console.error('Error retrieving news articles:', error);
-
-    return res.status(500).json({
-      error: 'Internal server error',
-      message:
-        error instanceof Error ? error.message : 'Failed to retrieve news',
-    });
+    next(error);
   }
 };
 
-export const getSingleNews: RequestHandler = async (req, res) => {
+export const getSingleNews: RequestHandler = async (req, res, next) => {
   try {
     const result = NewsSlugSchema.safeParse(req.params);
     if (!result.success) {
@@ -363,16 +323,11 @@ export const getSingleNews: RequestHandler = async (req, res) => {
 
     return res.status(200).json(news);
   } catch (error) {
-    console.error('Error fetching single news:', error);
-    return res.status(500).json({
-      error: 'Internal server error',
-      message:
-        error instanceof Error ? error.message : 'Failed to fetch news article',
-    });
+    next(error);
   }
 };
 
-export const incrementReadCount: RequestHandler = async (req, res) => {
+export const incrementReadCount: RequestHandler = async (req, res, next) => {
   const rawId = req.params.id;
   const id =
     typeof rawId === 'string' ? rawId : Array.isArray(rawId) ? rawId[0] : '';
@@ -394,11 +349,6 @@ export const incrementReadCount: RequestHandler = async (req, res) => {
     }
     return res.status(200).json(news);
   } catch (error) {
-    console.error('Error incrementing read count:', error);
-    return res.status(500).json({
-      error: 'Internal server error',
-      message:
-        error instanceof Error ? error.message : 'Failed to update read count',
-    });
+    next(error);
   }
 };

@@ -5,7 +5,7 @@ import queueService from '../services/queue.service';
  * Queue monitoring endpoint
  * Returns real-time statistics about email queue processing
  */
-export const getQueueStatus: RequestHandler = async (req, res) => {
+export const getQueueStatus: RequestHandler = async (req, res, next) => {
   try {
     const stats = await queueService.getQueueStats();
 
@@ -29,11 +29,7 @@ export const getQueueStatus: RequestHandler = async (req, res) => {
       },
     });
   } catch (error: any) {
-    console.error('Error fetching queue status:', error.message);
-    res.status(500).json({
-      error: 'Internal server error',
-      message: 'Failed to fetch queue status',
-    });
+    next(error);
   }
 };
 

@@ -96,26 +96,19 @@ describe('news controller', () => {
       expect(res.json).toHaveBeenCalledWith(updatedNews);
     });
 
-    it('returns 500 when service throws error', async () => {
-      const consoleSpy = jest
-        .spyOn(console, 'error')
-        .mockImplementation(() => {});
+    it('calls next(error) when service throws', async () => {
       const req = { params: { id: validNewsId } };
       const res = createResponse();
+      const next = jest.fn();
 
       newsService.incrementReadCount.mockRejectedValue(
         new Error('Database error'),
       );
 
-      await incrementReadCount(req as any, res as any, jest.fn());
+      await incrementReadCount(req as any, res as any, next);
 
-      consoleSpy.mockRestore();
-
-      expect(res.status).toHaveBeenCalledWith(500);
-      expect(res.json).toHaveBeenCalledWith({
-        error: 'Internal server error',
-        message: 'Database error',
-      });
+      expect(next).toHaveBeenCalledWith(expect.any(Error));
+      expect(res.status).not.toHaveBeenCalled();
     });
   });
 
@@ -175,24 +168,17 @@ describe('news controller', () => {
       expect(res.json).toHaveBeenCalledWith(news);
     });
 
-    it('returns 500 when service throws', async () => {
-      const consoleSpy = jest
-        .spyOn(console, 'error')
-        .mockImplementation(() => {});
+    it('calls next(error) when service throws', async () => {
       const req = { params: { slug: 'crypto-art-lagos-2025' } };
       const res = createResponse();
+      const next = jest.fn();
 
       newsService.getSingleNewsBySlug.mockRejectedValue(new Error('db down'));
 
-      await getSingleNews(req as any, res as any, jest.fn());
+      await getSingleNews(req as any, res as any, next);
 
-      consoleSpy.mockRestore();
-
-      expect(res.status).toHaveBeenCalledWith(500);
-      expect(res.json).toHaveBeenCalledWith({
-        error: 'Internal server error',
-        message: 'db down',
-      });
+      expect(next).toHaveBeenCalledWith(expect.any(Error));
+      expect(res.status).not.toHaveBeenCalled();
     });
   });
 });

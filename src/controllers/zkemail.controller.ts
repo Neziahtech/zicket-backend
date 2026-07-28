@@ -14,6 +14,7 @@ const ZkEmailHookSchema = z.object({
 export const zkEmailHookController: RequestHandler = async (
   req: Request,
   res: Response,
+  next,
 ) => {
   try {
     const parsed = ZkEmailHookSchema.safeParse(req.body);
@@ -35,6 +36,6 @@ export const zkEmailHookController: RequestHandler = async (
       jobId,
     });
   } catch (error: any) {
-    res.status(500).json({ message: error.message });
+    next(error);
   }
 };
