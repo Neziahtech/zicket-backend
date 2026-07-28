@@ -6,6 +6,7 @@ import {
 import { TicketOrderService } from '../src/services/ticket-order.service';
 import TicketOrder from '../src/models/ticket-order';
 import EventTicket from '../src/models/event-ticket';
+import { encodePaginationCursor } from '../src/utils/pagination-cursor';
 
 jest.mock('../src/services/ticket-order.service', () => ({
   TicketOrderService: {
@@ -93,6 +94,46 @@ describe('TicketOrder controller', () => {
         data: serviceResult,
       });
     });
+
+    it('passes a decoded cursor to the service when present', async () => {
+      const cursor = encodePaginationCursor(
+        new Date('2026-07-10T12:00:00.000Z'),
+        '507f191e810c19729de860ea',
+      );
+      const req = {
+        user: { _id: 'user123' },
+        query: { cursor, limit: '10' },
+      };
+      const res = createResponse();
+
+      const serviceResult = {
+        page: 1,
+        limit: 10,
+        total: 1,
+        totalPages: 1,
+        nextCursor: null,
+        orders: [],
+      };
+
+      ticketOrderService.getUserOrders.mockResolvedValue(serviceResult);
+
+      await getUserOrders(req as any, res as any, jest.fn());
+
+      expect(ticketOrderService.getUserOrders).toHaveBeenCalledWith(
+        'user123',
+        1,
+        10,
+        {
+          sortValue: new Date('2026-07-10T12:00:00.000Z'),
+          id: '507f191e810c19729de860ea',
+        },
+      );
+      expect(res.status).toHaveBeenCalledWith(200);
+      expect(res.json).toHaveBeenCalledWith({
+        success: true,
+        data: serviceResult,
+      });
+    });
   });
 
   describe('getOrganizerOrders', () => {
@@ -126,6 +167,46 @@ describe('TicketOrder controller', () => {
         'organizer123',
         1,
         10,
+      );
+      expect(res.status).toHaveBeenCalledWith(200);
+      expect(res.json).toHaveBeenCalledWith({
+        success: true,
+        data: serviceResult,
+      });
+    });
+
+    it('passes a decoded cursor to the service when present', async () => {
+      const cursor = encodePaginationCursor(
+        new Date('2026-07-10T12:00:00.000Z'),
+        '507f191e810c19729de860eb',
+      );
+      const req = {
+        user: { _id: 'organizer123' },
+        query: { cursor, limit: '10' },
+      };
+      const res = createResponse();
+
+      const serviceResult = {
+        page: 1,
+        limit: 10,
+        total: 1,
+        totalPages: 1,
+        nextCursor: null,
+        orders: [],
+      };
+
+      ticketOrderService.getOrganizerOrders.mockResolvedValue(serviceResult);
+
+      await getOrganizerOrders(req as any, res as any, jest.fn());
+
+      expect(ticketOrderService.getOrganizerOrders).toHaveBeenCalledWith(
+        'organizer123',
+        1,
+        10,
+        {
+          sortValue: new Date('2026-07-10T12:00:00.000Z'),
+          id: '507f191e810c19729de860eb',
+        },
       );
       expect(res.status).toHaveBeenCalledWith(200);
       expect(res.json).toHaveBeenCalledWith({

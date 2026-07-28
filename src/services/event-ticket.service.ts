@@ -5,6 +5,10 @@ import TicketOrder, { ITicketOrder } from '../models/ticket-order';
 import User from '../models/user';
 import Media from '../models/media';
 import zkEmailNotificationService from './zk-email-notification.service';
+import {
+  encodePaginationCursor,
+  PaginationCursor,
+} from '../utils/pagination-cursor';
 
 import { CreateEventStepTwoInput } from '../validators/event.validator';
 
@@ -25,6 +29,7 @@ export interface PaginatedEventTicketsResponse {
   page: number;
   limit: number;
   total: number;
+  nextCursor?: string | null;
   tickets: EventTicketResponse[];
 }
 
@@ -153,6 +158,7 @@ export class EventTicketService {
         page: validPage,
         limit: validLimit,
         total,
+        nextCursor: null,
         tickets: transformedTickets,
       };
     } catch (error) {
@@ -168,34 +174,71 @@ export class EventTicketService {
   static async getEventTickets(
     page: number = 1,
     limit: number = this.DEFAULT_LIMIT,
+    cursor?: PaginationCursor,
   ): Promise<PaginatedEventTicketsResponse> {
     try {
       // Validate pagination parameters
       const validPage = Math.max(1, page);
       const validLimit = Math.min(Math.max(1, limit), 50); // Cap at 50 for performance
+      const useCursor = Boolean(cursor);
 
-      // Calculate skip value
-      const skip = (validPage - 1) * validLimit;
+      const cursorFilter = cursor
+        ? {
+            $or: [
+              { createdAt: { $lt: cursor.sortValue } },
+              {
+                createdAt: cursor.sortValue,
+                _id: { $lt: new mongoose.Types.ObjectId(cursor.id) },
+              },
+            ],
+          }
+        : {};
+
+      let query = EventTicket.find(cursorFilter).sort({
+        createdAt: -1,
+        _id: -1,
+      });
+
+      if (useCursor) {
+        query = query.limit(validLimit + 1);
+      } else {
+        const skip = (validPage - 1) * validLimit;
+        query = query.skip(skip).limit(validLimit);
+      }
 
       // Get total count
       const total = await EventTicket.countDocuments();
 
       // Fetch tickets with pagination
-      const tickets = await EventTicket.find()
-        .sort({ createdAt: -1 }) // Sort by newest first
-        .skip(skip)
-        .limit(validLimit)
-        .lean(); // Use lean() for better performance
+      const tickets = await query.lean(); // Use lean() for better performance
+
+      const paginatedTickets = useCursor ? tickets.slice(0, validLimit) : tickets;
 
       // Transform tickets to response format
-      const transformedTickets = tickets.map((ticket) =>
+      const transformedTickets = paginatedTickets.map((ticket) =>
         this.transformEventTicket(ticket as unknown as IEventTicket),
       );
+
+      const hasNextPage = useCursor && tickets.length > validLimit;
+      const nextCursor =
+        hasNextPage && paginatedTickets.length > 0
+          ? encodePaginationCursor(
+              new Date(
+                (paginatedTickets[paginatedTickets.length - 1] as any)
+                  .createdAt,
+              ),
+              String(
+                (paginatedTickets[paginatedTickets.length - 1] as any)
+                  ._id,
+              ),
+            )
+          : null;
 
       return {
         page: validPage,
         limit: validLimit,
         total,
+        nextCursor,
         tickets: transformedTickets,
       };
     } catch (error) {
