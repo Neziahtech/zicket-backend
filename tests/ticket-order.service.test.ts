@@ -38,9 +38,11 @@ describe('TicketOrderService pagination', () => {
     ticketOrderModel.find.mockReturnValue({ sort: mockSort });
     eventTicketModel.find.mockReturnValue({
       select: jest.fn().mockReturnThis(),
-      lean: jest.fn().mockResolvedValue([
-        { _id: new mongoose.Types.ObjectId('507f191e810c19729de860ed') },
-      ]),
+      lean: jest
+        .fn()
+        .mockResolvedValue([
+          { _id: new mongoose.Types.ObjectId('507f191e810c19729de860ed') },
+        ]),
     });
   });
 

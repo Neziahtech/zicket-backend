@@ -6,7 +6,8 @@ import { generateAccessToken } from '../utils/token';
 export const loginController: RequestHandler = async (req, res, next) => {
   try {
     const { email, password } = req.body;
-    const DUMMY_HASH = '$2b$10$abcdefghijklmnopqrstuuabcdefghijklmnopqrstuuuuuuuuuuu';
+    const DUMMY_HASH =
+      '$2b$10$abcdefghijklmnopqrstuuabcdefghijklmnopqrstuuuuuuuuuuu';
     const user = await User.findOne({ email });
     if (!user) {
       await bcrypt.compare(password || '', DUMMY_HASH);

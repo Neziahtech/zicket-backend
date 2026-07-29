@@ -212,7 +212,9 @@ export class EventTicketService {
       // Fetch tickets with pagination
       const tickets = await query.lean(); // Use lean() for better performance
 
-      const paginatedTickets = useCursor ? tickets.slice(0, validLimit) : tickets;
+      const paginatedTickets = useCursor
+        ? tickets.slice(0, validLimit)
+        : tickets;
 
       // Transform tickets to response format
       const transformedTickets = paginatedTickets.map((ticket) =>
@@ -228,8 +230,7 @@ export class EventTicketService {
                   .createdAt,
               ),
               String(
-                (paginatedTickets[paginatedTickets.length - 1] as any)
-                  ._id,
+                (paginatedTickets[paginatedTickets.length - 1] as any)._id,
               ),
             )
           : null;

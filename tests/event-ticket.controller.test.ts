@@ -61,14 +61,10 @@ describe('event-ticket controller search', () => {
 
       await getEventTickets(req as any, res as any, jest.fn());
 
-      expect(eventTicketService.getEventTickets).toHaveBeenCalledWith(
-        1,
-        8,
-        {
-          sortValue: new Date('2026-07-01T12:00:00.000Z'),
-          id: '507f191e810c19729de860ea',
-        },
-      );
+      expect(eventTicketService.getEventTickets).toHaveBeenCalledWith(1, 8, {
+        sortValue: new Date('2026-07-01T12:00:00.000Z'),
+        id: '507f191e810c19729de860ea',
+      });
       expect(res.status).toHaveBeenCalledWith(200);
       expect(res.json).toHaveBeenCalledWith(serviceResult);
     });
