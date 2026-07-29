@@ -23,15 +23,15 @@ describe('loginController', () => {
     jest.clearAllMocks();
   });
 
-  it('returns 404 when user not found', async () => {
+  it('returns 401 with "Invalid credentials" when user not found', async () => {
     (User.findOne as jest.Mock).mockResolvedValue(null);
     const req = {
       body: { email: 'nonexistent@example.com', password: 'secret123' },
     };
     const res = createResponse();
     await loginController(req as any, res as any, jest.fn());
-    expect(res.status).toHaveBeenCalledWith(404);
-    expect(res.json).toHaveBeenCalledWith({ message: 'User not found' });
+    expect(res.status).toHaveBeenCalledWith(401);
+    expect(res.json).toHaveBeenCalledWith({ message: 'Invalid credentials' });
   });
 
   it('calls next(error) on unexpected error', async () => {

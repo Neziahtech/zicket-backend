@@ -6,9 +6,11 @@ import { generateAccessToken } from '../utils/token';
 export const loginController: RequestHandler = async (req, res, next) => {
   try {
     const { email, password } = req.body;
+    const DUMMY_HASH = '$2b$10$abcdefghijklmnopqrstuuabcdefghijklmnopqrstuuuuuuuuuuu';
     const user = await User.findOne({ email });
     if (!user) {
-      res.status(404).json({ message: 'User not found' });
+      await bcrypt.compare(password || '', DUMMY_HASH);
+      res.status(401).json({ message: 'Invalid credentials' });
       return;
     }
     if (user.provider === 'google') {
