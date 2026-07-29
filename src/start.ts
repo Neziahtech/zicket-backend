@@ -55,20 +55,45 @@ async function startServer() {
       console.log(`âœ“ Server running on port ${config.port}`);
     });
 
+    server.on('error', (error) => {
+      console.error('Failed to start server:', error);
+      void closeAllServices().finally(() => process.exit(1));
+    });
+
+    const closeAllServices = async () => {
+      const services: Array<[string, () => Promise<void>]> = [
+        ['emailWorker', () => emailWorker.close()],
+        ['zkEmailWorker', () => zkEmailWorker.close()],
+        ['paymentWorker', () => paymentWorker.close()],
+        ['reconciliationWorker', () => reconciliationWorker.close()],
+        ['waitlistWorker', () => waitlistWorker.close()],
+        ['retentionWorker', () => retentionWorker.close()],
+        ['indexerWorker', () => Promise.resolve(indexerWorker.stop())],
+        ['queueService', () => queueService.close()],
+      ];
+
+      let hadError = false;
+      for (const [name, close] of services) {
+        try {
+          await close();
+        } catch (error) {
+          hadError = true;
+          console.error(`Failed to close ${name}:`, error);
+        }
+      }
+      return hadError;
+    };
+
     // Graceful shutdown
     const gracefulShutdown = async () => {
       console.log('\nðŸ›‘ Shutting down gracefully...');
       server.close(async () => {
         console.log('Express server stopped');
-        await emailWorker.close();
-        await zkEmailWorker.close();
-        await paymentWorker.close();
-        await reconciliationWorker.close();
-        await waitlistWorker.close();
-        await retentionWorker.close();
-        await queueService.close();
-        console.log('All services closed');
-        process.exit(0);
+        const hadError = await closeAllServices();
+        console.log(
+          hadError ? 'Some services failed to close' : 'All services closed',
+        );
+        process.exit(hadError ? 1 : 0);
       });
 
       // Force shutdown after 10 seconds

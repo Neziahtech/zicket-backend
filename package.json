@@ -2,7 +2,7 @@
   "name": "zicket-backend",
   "version": "1.0.0",
   "description": "Backend services for Zicket",
-  "main": "start.ts",
+  "main": "dist/server.js",
   "scripts": {
     "build": "tsc",
     "start": "node dist/start.js",
