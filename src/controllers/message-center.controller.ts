@@ -62,7 +62,7 @@ function validateCreateMessageBody(
   return { valid: true, payload };
 }
 
-export const deleteMessage: RequestHandler = async (req, res) => {
+export const deleteMessage: RequestHandler = async (req, res, next) => {
   try {
     const { messageId } = req.params;
 
@@ -80,8 +80,7 @@ export const deleteMessage: RequestHandler = async (req, res) => {
       return;
     }
 
-    console.error('Error in deleteMessageController:', error.message);
-    res.status(500).json({ message: 'An error occurred. Please try again.' });
+    next(error);
   }
 };
 
@@ -98,7 +97,7 @@ const parsePage = (rawPage: unknown): number | null => {
   return page > 0 ? page : null;
 };
 
-export const sendMessage: RequestHandler = async (req, res) => {
+export const sendMessage: RequestHandler = async (req, res, next) => {
   const validation = validateCreateMessageBody(req.body);
   if (!validation.valid) {
     return res.status(400).json({
@@ -112,16 +111,11 @@ export const sendMessage: RequestHandler = async (req, res) => {
     );
     return res.status(201).json(message);
   } catch (error) {
-    console.error('Error creating message-center message:', error);
-    return res.status(500).json({
-      error: 'Internal server error',
-      message:
-        error instanceof Error ? error.message : 'Failed to create message',
-    });
+    next(error);
   }
 };
 
-export const getPastMessages: RequestHandler = async (req, res) => {
+export const getPastMessages: RequestHandler = async (req, res, next) => {
   try {
     const page = parsePage(req.query.page);
 
@@ -135,19 +129,11 @@ export const getPastMessages: RequestHandler = async (req, res) => {
     const result = await MessageCenterService.getPastMessages(page);
     return res.status(200).json(result);
   } catch (error) {
-    console.error('Error fetching past message-center messages:', error);
-
-    return res.status(500).json({
-      error: 'Internal server error',
-      message:
-        error instanceof Error
-          ? error.message
-          : 'Failed to fetch past message-center messages',
-    });
+    next(error);
   }
 };
 
-export const getScheduledMessages: RequestHandler = async (req, res) => {
+export const getScheduledMessages: RequestHandler = async (req, res, next) => {
   try {
     const page = parsePage(req.query.page);
 
@@ -161,19 +147,11 @@ export const getScheduledMessages: RequestHandler = async (req, res) => {
     const result = await MessageCenterService.getScheduledMessages(page);
     return res.status(200).json(result);
   } catch (error) {
-    console.error('Error fetching scheduled message-center messages:', error);
-
-    return res.status(500).json({
-      error: 'Internal server error',
-      message:
-        error instanceof Error
-          ? error.message
-          : 'Failed to fetch scheduled message-center messages',
-    });
+    next(error);
   }
 };
 
-export const editMessage: RequestHandler = async (req, res) => {
+export const editMessage: RequestHandler = async (req, res, next) => {
   try {
     const rawId = req.params.messageId;
     const messageId =
@@ -250,14 +228,6 @@ export const editMessage: RequestHandler = async (req, res) => {
 
     return res.status(200).json(result);
   } catch (error) {
-    console.error('Error updating message-center message:', error);
-
-    return res.status(500).json({
-      error: 'Internal server error',
-      message:
-        error instanceof Error
-          ? error.message
-          : 'Failed to update message-center message',
-    });
+    next(error);
   }
 };

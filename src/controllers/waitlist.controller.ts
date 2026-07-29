@@ -19,6 +19,7 @@ function getUserId(req: UserAuthenticatedReq): string | undefined {
 export const joinWaitlist: RequestHandler = async (
   req: UserAuthenticatedReq,
   res,
+  next,
 ) => {
   try {
     const userId = getUserId(req);
@@ -29,7 +30,6 @@ export const joinWaitlist: RequestHandler = async (
     if (!mongoose.Types.ObjectId.isValid(eventId)) {
       throw new ValidationError('Invalid event ID');
     }
-
     const entry = await WaitlistService.join(userId, eventId);
     return res.status(201).json({ success: true, data: entry });
   } catch (error) {
@@ -38,12 +38,7 @@ export const joinWaitlist: RequestHandler = async (
         .status(error.statusCode)
         .json({ success: false, error: error.code, message: error.message });
     }
-    return res.status(400).json({
-      success: false,
-      error: 'WAITLIST_JOIN_FAILED',
-      message:
-        error instanceof Error ? error.message : 'Failed to join waitlist',
-    });
+    return next(error);
   }
 };
 
@@ -54,6 +49,7 @@ export const joinWaitlist: RequestHandler = async (
 export const leaveWaitlist: RequestHandler = async (
   req: UserAuthenticatedReq,
   res,
+  next,
 ) => {
   try {
     const userId = getUserId(req);
@@ -64,7 +60,6 @@ export const leaveWaitlist: RequestHandler = async (
     if (!mongoose.Types.ObjectId.isValid(eventId)) {
       throw new ValidationError('Invalid event ID');
     }
-
     await WaitlistService.leave(userId, eventId);
     return res
       .status(200)
@@ -75,12 +70,7 @@ export const leaveWaitlist: RequestHandler = async (
         .status(error.statusCode)
         .json({ success: false, error: error.code, message: error.message });
     }
-    return res.status(400).json({
-      success: false,
-      error: 'WAITLIST_LEAVE_FAILED',
-      message:
-        error instanceof Error ? error.message : 'Failed to leave waitlist',
-    });
+    return next(error);
   }
 };
 
@@ -91,6 +81,7 @@ export const leaveWaitlist: RequestHandler = async (
 export const getWaitlistStatus: RequestHandler = async (
   req: UserAuthenticatedReq,
   res,
+  next,
 ) => {
   try {
     const userId = getUserId(req);
@@ -101,7 +92,6 @@ export const getWaitlistStatus: RequestHandler = async (
     if (!mongoose.Types.ObjectId.isValid(eventId)) {
       throw new ValidationError('Invalid event ID');
     }
-
     const status = await WaitlistService.getStatus(userId, eventId);
     return res.status(200).json({ success: true, data: status });
   } catch (error) {
@@ -110,13 +100,6 @@ export const getWaitlistStatus: RequestHandler = async (
         .status(error.statusCode)
         .json({ success: false, error: error.code, message: error.message });
     }
-    return res.status(400).json({
-      success: false,
-      error: 'WAITLIST_STATUS_FAILED',
-      message:
-        error instanceof Error
-          ? error.message
-          : 'Failed to fetch waitlist status',
-    });
+    return next(error);
   }
 };

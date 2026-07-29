@@ -2,7 +2,11 @@ import { RequestHandler } from 'express';
 import User from '../models/user';
 import zkOrchestratorService from '../services/zk-orchestrator.service';
 
-export const verifyAccountController: RequestHandler = async (req, res) => {
+export const verifyAccountController: RequestHandler = async (
+  req,
+  res,
+  next,
+) => {
   try {
     const { email, otp } = req.body;
 
@@ -51,6 +55,6 @@ export const verifyAccountController: RequestHandler = async (req, res) => {
 
     res.status(200).json({ message: 'Account verified successfully' });
   } catch (error: any) {
-    res.status(500).json({ message: error.message });
+    next(error);
   }
 };

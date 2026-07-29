@@ -3,7 +3,7 @@ import User from '../models/user';
 import { generateOTP } from '../utils/otp';
 import emailService from '../services/email.service';
 
-export const resendOtpController: RequestHandler = async (req, res) => {
+export const resendOtpController: RequestHandler = async (req, res, next) => {
   try {
     const { email } = req.body;
 
@@ -33,6 +33,6 @@ export const resendOtpController: RequestHandler = async (req, res) => {
 
     res.status(200).json({ message: 'OTP resent successfully' });
   } catch (error: any) {
-    res.status(500).json({ message: error.message });
+    next(error);
   }
 };

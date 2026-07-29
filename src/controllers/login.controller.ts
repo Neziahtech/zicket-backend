@@ -31,7 +31,7 @@ export const loginController: RequestHandler = async (req, res, next) => {
     }
     const token = generateAccessToken(user);
     res.status(200).json({ message: 'Login successful', token });
-  } catch (error) {
+  } catch (error: any) {
     next(error);
   }
 };

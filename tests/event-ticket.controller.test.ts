@@ -36,7 +36,6 @@ describe('event-ticket controller search', () => {
     const res = createResponse();
 
     await searchEventTickets(req as any, res as any, jest.fn());
-
     expect(res.status).toHaveBeenCalledWith(400);
     expect(res.json).toHaveBeenCalledWith({
       error: 'Invalid query',
@@ -150,22 +149,20 @@ describe('event-ticket controller search', () => {
     expect(res.json).toHaveBeenCalledWith(serviceResult);
   });
 
-  it('returns 500 when service throws an error', async () => {
+  it('calls next(error) when service throws an unexpected error', async () => {
     const req = {
       query: { q: 'error' },
     };
     const res = createResponse();
+    const next = jest.fn();
 
     eventTicketService.searchEventTickets.mockRejectedValue(
       new Error('service failure'),
     );
 
-    await searchEventTickets(req as any, res as any, jest.fn());
+    await searchEventTickets(req as any, res as any, next);
 
-    expect(res.status).toHaveBeenCalledWith(500);
-    expect(res.json).toHaveBeenCalledWith({
-      error: 'Internal server error',
-      message: 'service failure',
-    });
+    expect(next).toHaveBeenCalledWith(expect.any(Error));
+    expect(res.status).not.toHaveBeenCalled();
   });
 });
