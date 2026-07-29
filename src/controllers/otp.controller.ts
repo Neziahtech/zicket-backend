@@ -1,9 +1,10 @@
-import { Request, Response } from 'express';
+import { Request, Response, NextFunction } from 'express';
 import User from '../models/user';
 
 export const otpVerificationController = async (
   req: Request,
   res: Response,
+  next: NextFunction,
 ) => {
   try {
     const { email, otp } = req.body;
@@ -27,7 +28,7 @@ export const otpVerificationController = async (
     res.status(200).json({ message: 'OTP verified successfully' });
     return;
   } catch (error: any) {
-    res.status(500).json({ message: error.message });
+    next(error);
     return;
   }
 };

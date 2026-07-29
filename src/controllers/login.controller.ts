@@ -49,6 +49,6 @@ export const loginController: RequestHandler = async (req, res, next) => {
 
     res.status(200).json({ message: 'Login successful', token });
   } catch (error: any) {
-    res.status(500).json({ message: error.message });
+    next(error);
   }
 };
