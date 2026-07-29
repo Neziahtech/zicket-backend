@@ -1,5 +1,7 @@
 import express from 'express';
 import { signupController } from '../controllers/signup.controller';
+import { validateSchema } from '../middlewares/validator';
+import { SignupSchema, LoginSchema } from '../validators/auth.validator';
 import { loginController } from '../controllers/login.controller';
 import { resendOtpController } from '../controllers/resendotp.controller';
 import { verifyAccountController } from '../controllers/verify.controller';
@@ -16,9 +18,19 @@ dotenv.config();
 
 const authRoute = express.Router();
 
-authRoute.post('/signup', getLimiter('signup'), signupController);
+authRoute.post(
+  '/signup',
+  getLimiter('signup'),
+  validateSchema(SignupSchema),
+  signupController,
+);
 
-authRoute.post('/login', getLimiter('login'), loginController);
+authRoute.post(
+  '/login',
+  getLimiter('login'),
+  validateSchema(LoginSchema),
+  loginController,
+);
 
 authRoute.post('/verify-account', getLimiter('otp'), verifyAccountController);
 

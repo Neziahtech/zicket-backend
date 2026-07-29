@@ -1,8 +1,8 @@
-import { Request, RequestHandler, Response } from 'express';
+import { RequestHandler } from 'express';
 import { z } from 'zod';
 import queueService from '../services/queue.service';
 
-const ZkEmailHookSchema = z.object({
+export const ZkEmailHookSchema = z.object({
   hashedEmail: z
     .string()
     .regex(
@@ -11,31 +11,15 @@ const ZkEmailHookSchema = z.object({
     ),
 });
 
-export const zkEmailHookController: RequestHandler = async (
-  req: Request,
-  res: Response,
-  next,
-) => {
+export const zkEmailHookController: RequestHandler = async (req, res, next) => {
   try {
-    const parsed = ZkEmailHookSchema.safeParse(req.body);
-
-    if (!parsed.success) {
-      res.status(400).json({
-        error: 'Validation failed',
-        message: parsed.error.issues[0].message,
-      });
-      return;
-    }
-
-    const { hashedEmail } = parsed.data;
-
+    const { hashedEmail } = req.body;
     const jobId = await queueService.enqueueZkEmailHook(hashedEmail);
-
     res.status(202).json({
       message: 'zkEmail flow queued',
       jobId,
     });
-  } catch (error: any) {
+  } catch (error) {
     next(error);
   }
 };

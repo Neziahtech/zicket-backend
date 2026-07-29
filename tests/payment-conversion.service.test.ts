@@ -1,3 +1,7 @@
+(BigInt.prototype as any).toJSON = function () {
+  return this.toString();
+};
+
 /**
  * Unit tests for asset pricing + payment verification conversion (#161).
  */
@@ -80,7 +84,7 @@ describe('asset-pricing.service', () => {
   describe('minAcceptableAmount', () => {
     it('applies tolerance bps below expected', () => {
       const expected = 1_000_000n;
-      // 100 bps = 1% → min = 990_000
+      // 100 bps = 1% â†’ min = 990_000
       expect(minAcceptableAmount(expected, 100)).toBe(990000n);
     });
 
@@ -140,7 +144,7 @@ describe('asset-pricing.service', () => {
       process.env.PAYMENT_TOLERANCE_BPS = '100';
 
       const r = await resolveExpectedPaymentBaseUnits(100);
-      // 100/2000 ETH = 0.05 → 5e16
+      // 100/2000 ETH = 0.05 â†’ 5e16
       expect(r.expectedBaseUnits).toBe(50000000000000000n);
       expect(r.minAcceptable).toBe((50000000000000000n * 9900n) / 10000n);
       expect(r.quote.source).toBe('fallback');
@@ -148,7 +152,7 @@ describe('asset-pricing.service', () => {
   });
 });
 
-describe('PaymentVerificationService.verify — conversion', () => {
+describe('PaymentVerificationService.verify â€” conversion', () => {
   const envBackup = { ...process.env };
 
   beforeEach(() => {
@@ -195,7 +199,7 @@ describe('PaymentVerificationService.verify — conversion', () => {
 
   it('accepts underpayment within tolerance', async () => {
     const blockchain = chainMocks();
-    // expected 5e16, tol 1% → min 4.95e16
+    // expected 5e16, tol 1% â†’ min 4.95e16
     blockchain.fetchTransaction.mockResolvedValue({
       hash: '0xabc',
       from: '0xsender',
@@ -218,7 +222,7 @@ describe('PaymentVerificationService.verify — conversion', () => {
   it('rejects underpayment beyond tolerance (no longer 1 USD = 1 ETH)', async () => {
     const blockchain = chainMocks();
     // Old bug would expect 100e18 wei for $100; we now expect ~0.05 ETH.
-    // Send only 0.01 ETH → should fail.
+    // Send only 0.01 ETH â†’ should fail.
     blockchain.fetchTransaction.mockResolvedValue({
       hash: '0xabc',
       from: '0xsender',

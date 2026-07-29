@@ -254,8 +254,13 @@ export function usdToAssetBaseUnits(
 
   // Exact decimal path: avoid float * 10**decimals precision loss.
   const [i, f = ''] = whole.toFixed(decimals).split('.');
+  if (!/^\d+$/.test(i)) {
+    throw new PricingConfigError(
+      `USD→asset conversion out of representable range: ${whole}`,
+    );
+  }
   const frac = (f + '0'.repeat(decimals)).slice(0, decimals);
-  return BigInt(i) * BigInt(10 ** decimals) + BigInt(frac || '0');
+  return BigInt(i) * 10n ** BigInt(decimals) + BigInt(frac || '0');
 }
 
 /**

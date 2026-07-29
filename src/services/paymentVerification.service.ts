@@ -156,8 +156,11 @@ export class PaymentVerificationService {
         );
       }
       const detail = err instanceof Error ? err.message : String(err);
+      console.error(
+        `[PaymentVerificationService] pricing unavailable for order=${orderRef}: ${detail}`,
+      );
       throw new ServiceUnavailableError(
-        `Payment verification pricing unavailable (${detail}). Configure PRICE_API_URL or FALLBACK_USD_PER_ASSET and retry.`,
+        'Payment verification is temporarily unavailable. Please retry shortly.',
       );
     }
 
