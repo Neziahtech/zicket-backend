@@ -10,3 +10,7 @@ jest.mock('express-rate-limit', () => {
 });
 
 global.console.error = jest.fn();
+
+(BigInt.prototype as any).toJSON = function () {
+  return this.toString();
+};

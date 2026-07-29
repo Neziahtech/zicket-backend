@@ -245,22 +245,11 @@ export function usdToAssetBaseUnits(
     throw new PricingConfigError(`Invalid asset decimals: ${decimals}`);
   }
 
-  const whole = amountUsd / usdPerAsset;
-  if (!Number.isFinite(whole) || whole < 0) {
-    throw new PricingConfigError(
-      `USD→asset conversion produced non-finite value`,
-    );
-  }
-
-  // Exact decimal path: avoid float * 10**decimals precision loss.
-  const [i, f = ''] = whole.toFixed(decimals).split('.');
-  if (!/^\d+$/.test(i)) {
-    throw new PricingConfigError(
-      `USD→asset conversion out of representable range: ${whole}`,
-    );
-  }
-  const frac = (f + '0'.repeat(decimals)).slice(0, decimals);
-  return BigInt(i) * 10n ** BigInt(decimals) + BigInt(frac || '0');
+  // Exact BigInt math for rational rates (or float to scaled ratio) to avoid IEEE 754 precision artifacts.
+  const scale = 1e8;
+  const rateScaled = BigInt(Math.round(usdPerAsset * scale));
+  const amountUsdScaled = BigInt(Math.round(amountUsd * scale));
+  return (amountUsdScaled * 10n ** BigInt(decimals)) / rateScaled;
 }
 
 /**

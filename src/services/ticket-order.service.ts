@@ -76,10 +76,7 @@ export class TicketOrderService {
                 (paginatedOrders[paginatedOrders.length - 1] as any)
                   .datePurchased,
               ),
-              String(
-                (paginatedOrders[paginatedOrders.length - 1] as any)
-                  ._id,
-              ),
+              String((paginatedOrders[paginatedOrders.length - 1] as any)._id),
             )
           : null;
 
@@ -177,10 +174,7 @@ export class TicketOrderService {
                 (paginatedOrders[paginatedOrders.length - 1] as any)
                   .datePurchased,
               ),
-              String(
-                (paginatedOrders[paginatedOrders.length - 1] as any)
-                  ._id,
-              ),
+              String((paginatedOrders[paginatedOrders.length - 1] as any)._id),
             )
           : null;
 

@@ -10,10 +10,7 @@ interface EncodedPaginationCursor {
   id: string;
 }
 
-export const encodePaginationCursor = (
-  sortValue: Date,
-  id: string,
-): string => {
+export const encodePaginationCursor = (sortValue: Date, id: string): string => {
   return Buffer.from(
     JSON.stringify({
       sortValue: sortValue.toISOString(),
