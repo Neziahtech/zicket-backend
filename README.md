@@ -24,8 +24,9 @@ src/ <br>
 ├── services/      # Business logic layer
 ├── tests/         # Jest test files
 ├── utils/         # Utility functions
-└── app.ts         # Application grade
-└── server.ts      # Application entry point
+└── app.ts         # Express application setup (exported for tests)
+└── server.ts      # Re-exports the app for consumers/tests
+└── start.ts       # Application entry point (connects services, starts listening)
 ```
 
 ---

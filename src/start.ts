@@ -1,0 +1,114 @@
+import app from './server';
+import config, { validateEnv } from './config/config';
+import { mongoConnect } from './config/db.mongo';
+import queueService from './services/queue.service';
+import emailWorker from './workers/email.worker';
+import zkEmailWorker from './workers/zkemail.worker';
+import paymentWorker from './workers/payment.worker';
+import reconciliationWorker from './workers/reconciliation.worker';
+import retentionWorker, {
+  initializeRetentionWorker,
+} from './workers/retention.worker';
+import indexerWorker from './workers/indexer.worker';
+import waitlistWorker from './workers/waitlist.worker';
+
+async function startServer() {
+  try {
+    // Validate required environment variables
+    validateEnv();
+
+    // Connect to MongoDB
+    await mongoConnect();
+    console.log('âœ“ MongoDB connected');
+
+    // Initialize queue service
+    await queueService.initialize();
+    console.log('âœ“ Queue service initialized');
+
+    // Initialize email worker
+    await emailWorker.initialize();
+    console.log('âœ“ Email worker initialized');
+
+    // Initialize zkEmail worker
+    await zkEmailWorker.initialize();
+    console.log('âœ“ zkEmail worker initialized');
+
+    // Initialize indexer worker
+    await indexerWorker.initialize();
+    console.log('âœ“ Indexer worker initialized');
+
+    // Payment worker (processes webhook events via state machine)
+    console.log('âœ“ Payment worker initialized');
+
+    // Reconciliation worker (periodic stale-tx cleanup via state machine)
+    console.log('âœ“ Reconciliation worker initialized');
+
+    // Retention worker (TTL hygiene + anonymization job retries)
+    await initializeRetentionWorker();
+    console.log('âœ“ Retention worker initialized');
+
+    await waitlistWorker.initialize();
+    console.log('Waitlist worker initialized');
+
+    // Start Express server
+    const server = app.listen(config.port, () => {
+      console.log(`âœ“ Server running on port ${config.port}`);
+    });
+
+    server.on('error', (error) => {
+      console.error('Failed to start server:', error);
+      void closeAllServices().finally(() => process.exit(1));
+    });
+
+    const closeAllServices = async () => {
+      const services: Array<[string, () => Promise<void>]> = [
+        ['emailWorker', () => emailWorker.close()],
+        ['zkEmailWorker', () => zkEmailWorker.close()],
+        ['paymentWorker', () => paymentWorker.close()],
+        ['reconciliationWorker', () => reconciliationWorker.close()],
+        ['waitlistWorker', () => waitlistWorker.close()],
+        ['retentionWorker', () => retentionWorker.close()],
+        ['indexerWorker', () => Promise.resolve(indexerWorker.stop())],
+        ['queueService', () => queueService.close()],
+      ];
+
+      let hadError = false;
+      for (const [name, close] of services) {
+        try {
+          await close();
+        } catch (error) {
+          hadError = true;
+          console.error(`Failed to close ${name}:`, error);
+        }
+      }
+      return hadError;
+    };
+
+    // Graceful shutdown
+    const gracefulShutdown = async () => {
+      console.log('\nðŸ›‘ Shutting down gracefully...');
+      server.close(async () => {
+        console.log('Express server stopped');
+        const hadError = await closeAllServices();
+        console.log(
+          hadError ? 'Some services failed to close' : 'All services closed',
+        );
+        process.exit(hadError ? 1 : 0);
+      });
+
+      // Force shutdown after 10 seconds
+      setTimeout(() => {
+        console.error('Forced shutdown after timeout');
+        process.exit(1);
+      }, 10000);
+    };
+
+    process.on('SIGTERM', gracefulShutdown);
+    process.on('SIGINT', gracefulShutdown);
+  } catch (error) {
+    console.error('Failed to start server:', error);
+    process.exit(1);
+  }
+}
+
+startServer();
