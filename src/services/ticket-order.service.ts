@@ -4,12 +4,17 @@ import EventTicket from '../models/event-ticket';
 import User from '../models/user';
 import zkEmailNotificationService from './zk-email-notification.service';
 import WaitlistService from './waitlist.service';
+import {
+  encodePaginationCursor,
+  PaginationCursor,
+} from '../utils/pagination-cursor';
 
 export interface PaginatedTicketOrdersResponse {
   page: number;
   limit: number;
   total: number;
   totalPages: number;
+  nextCursor?: string | null;
   orders: ITicketOrder[];
 }
 
@@ -21,29 +26,70 @@ export class TicketOrderService {
     userId: string,
     page: number = 1,
     limit: number = 10,
+    cursor?: PaginationCursor,
   ): Promise<PaginatedTicketOrdersResponse> {
     try {
       const validPage = Math.max(1, page);
       const validLimit = Math.max(1, Math.min(limit, 50));
-      const skip = (validPage - 1) * validLimit;
+      const useCursor = Boolean(cursor);
+      const baseFilter = { user: new (mongoose.Types.ObjectId as any)(userId) };
+      const cursorFilter = cursor
+        ? {
+            $or: [
+              { datePurchased: { $lt: cursor.sortValue } },
+              {
+                datePurchased: cursor.sortValue,
+                _id: { $lt: new mongoose.Types.ObjectId(cursor.id) },
+              },
+            ],
+          }
+        : {};
 
-      const filter = { user: new (mongoose.Types.ObjectId as any)(userId) };
+      const filter = {
+        ...baseFilter,
+        ...cursorFilter,
+      };
+
+      let query = TicketOrder.find(filter).sort({
+        datePurchased: -1,
+        _id: -1,
+      });
+
+      if (useCursor) {
+        query = query.limit(validLimit + 1);
+      } else {
+        const skip = (validPage - 1) * validLimit;
+        query = query.skip(skip).limit(validLimit);
+      }
 
       const [orders, total] = await Promise.all([
-        TicketOrder.find(filter)
-          .sort({ datePurchased: -1 })
-          .skip(skip)
-          .limit(validLimit)
-          .lean(),
-        TicketOrder.countDocuments(filter),
+        query.lean(),
+        TicketOrder.countDocuments(baseFilter),
       ]);
+
+      const paginatedOrders = useCursor ? orders.slice(0, validLimit) : orders;
+      const hasNextPage = useCursor && orders.length > validLimit;
+      const nextCursor =
+        hasNextPage && paginatedOrders.length > 0
+          ? encodePaginationCursor(
+              new Date(
+                (paginatedOrders[paginatedOrders.length - 1] as any)
+                  .datePurchased,
+              ),
+              String(
+                (paginatedOrders[paginatedOrders.length - 1] as any)
+                  ._id,
+              ),
+            )
+          : null;
 
       return {
         page: validPage,
         limit: validLimit,
         total,
         totalPages: Math.ceil(total / validLimit),
-        orders: orders as unknown as ITicketOrder[],
+        nextCursor,
+        orders: paginatedOrders as unknown as ITicketOrder[],
       };
     } catch (error) {
       throw new Error(
@@ -59,11 +105,12 @@ export class TicketOrderService {
     organizerId: string,
     page: number = 1,
     limit: number = 10,
+    cursor?: PaginationCursor,
   ): Promise<PaginatedTicketOrdersResponse> {
     try {
       const validPage = Math.max(1, page);
       const validLimit = Math.max(1, Math.min(limit, 50));
-      const skip = (validPage - 1) * validLimit;
+      const useCursor = Boolean(cursor);
 
       // 1. Find all events organized by this user
       const events = await EventTicket.find({
@@ -78,6 +125,7 @@ export class TicketOrderService {
           limit: validLimit,
           total: 0,
           totalPages: 0,
+          nextCursor: null,
           orders: [],
         };
       }
@@ -85,23 +133,64 @@ export class TicketOrderService {
       const eventIds = events.map((event) => event._id);
 
       // 2. Find all orders for those events
-      const filter = { eventTicket: { $in: eventIds } };
+      const baseFilter = { eventTicket: { $in: eventIds } };
+      const cursorFilter = cursor
+        ? {
+            $or: [
+              { datePurchased: { $lt: cursor.sortValue } },
+              {
+                datePurchased: cursor.sortValue,
+                _id: { $lt: new mongoose.Types.ObjectId(cursor.id) },
+              },
+            ],
+          }
+        : {};
+
+      const filter = {
+        ...baseFilter,
+        ...cursorFilter,
+      };
+
+      let query = TicketOrder.find(filter).sort({
+        datePurchased: -1,
+        _id: -1,
+      });
+
+      if (useCursor) {
+        query = query.limit(validLimit + 1);
+      } else {
+        const skip = (validPage - 1) * validLimit;
+        query = query.skip(skip).limit(validLimit);
+      }
 
       const [orders, total] = await Promise.all([
-        TicketOrder.find(filter)
-          .sort({ datePurchased: -1 })
-          .skip(skip)
-          .limit(validLimit)
-          .lean(),
-        TicketOrder.countDocuments(filter),
+        query.lean(),
+        TicketOrder.countDocuments(baseFilter),
       ]);
+
+      const paginatedOrders = useCursor ? orders.slice(0, validLimit) : orders;
+      const hasNextPage = useCursor && orders.length > validLimit;
+      const nextCursor =
+        hasNextPage && paginatedOrders.length > 0
+          ? encodePaginationCursor(
+              new Date(
+                (paginatedOrders[paginatedOrders.length - 1] as any)
+                  .datePurchased,
+              ),
+              String(
+                (paginatedOrders[paginatedOrders.length - 1] as any)
+                  ._id,
+              ),
+            )
+          : null;
 
       return {
         page: validPage,
         limit: validLimit,
         total,
         totalPages: Math.ceil(total / validLimit),
-        orders: orders as unknown as ITicketOrder[],
+        nextCursor,
+        orders: paginatedOrders as unknown as ITicketOrder[],
       };
     } catch (error) {
       throw new Error(

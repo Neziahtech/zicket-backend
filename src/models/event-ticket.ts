@@ -43,6 +43,8 @@ export interface IEventTicket extends Document {
   isPublished: boolean; // whether the event is published
   allowAnonymous: boolean; // whether unauthenticated users may purchase tickets
   requiresVerification: boolean; // whether attendees must have a verified email
+  createdAt?: Date;
+  updatedAt?: Date;
   __v?: number; // Mongoose version key for optimistic locking
 }
 

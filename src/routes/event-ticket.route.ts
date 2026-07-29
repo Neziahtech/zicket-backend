@@ -29,7 +29,8 @@ eventTicketRoutes.post('/scan', authGuard, scanTicket);
 // POST /api/event-tickets/validate - Validate ticket without marking as used
 eventTicketRoutes.post('/validate', authGuard, validateTicket);
 
-// GET /api/event-tickets - Fetch paginated event tickets
+// GET /api/event-tickets - Fetch tickets with cursor pagination via `cursor` and `limit`,
+// or `page` and `limit` as a fallback. Responses include `nextCursor` when more data exists.
 eventTicketRoutes.get('/', getEventTickets);
 
 // GET /api/event-tickets/category/:category - Fetch event tickets by category

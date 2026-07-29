@@ -13,14 +13,14 @@ const ticketOrderRoutes = Router();
 
 /**
  * @route GET /ticket-orders/my-orders
- * @desc Get ticket orders for the logged-in user
+ * @desc Get ticket orders for the logged-in user using `cursor` and `limit`, or `page` fallback
  * @access Private
  */
 ticketOrderRoutes.get('/my-orders', authGuard, getUserOrders);
 
 /**
  * @route GET /ticket-orders/organizer-orders
- * @desc Get ticket orders for events organized by the logged-in user
+ * @desc Get ticket orders for events organized by the logged-in user using `cursor` and `limit`, or `page` fallback
  * @access Private
  */
 ticketOrderRoutes.get('/organizer-orders', authGuard, getOrganizerOrders);
