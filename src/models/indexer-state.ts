@@ -2,7 +2,7 @@ import mongoose, { Document, Schema } from 'mongoose';
 
 export interface IIndexerState extends Document {
   contractAddress: string;
-  lastIndexedBlock: number;
+  lastIndexedLedger: number;
   updatedAt: Date;
 }
 
@@ -14,7 +14,7 @@ const indexerStateSchema = new Schema<IIndexerState>(
       unique: true,
       lowercase: true,
     },
-    lastIndexedBlock: {
+    lastIndexedLedger: {
       type: Number,
       required: true,
       default: 0,
