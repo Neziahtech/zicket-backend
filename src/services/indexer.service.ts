@@ -8,7 +8,8 @@ export class IndexerService {
   private contractAddress = (
     process.env.INDEXER_CONTRACT_ADDRESS || ''
   ).toLowerCase();
-  private rpcUrl = process.env.SOROBAN_RPC_URL || process.env.BLOCKCHAIN_RPC_URL || '';
+  private rpcUrl =
+    process.env.SOROBAN_RPC_URL || process.env.BLOCKCHAIN_RPC_URL || '';
   private maxLedgerRange = 10000;
   private server: rpc.Server;
 
@@ -28,7 +29,7 @@ export class IndexerService {
 
     try {
       const latestLedgerResponse = await this.executeWithRetry(() =>
-        this.server.getLatestLedger()
+        this.server.getLatestLedger(),
       );
       const currentLedger = latestLedgerResponse.sequence;
 
@@ -73,7 +74,7 @@ export class IndexerService {
 
           const eventsResponse: rpc.Api.GetEventsResponse =
             await this.executeWithRetry(() =>
-              this.server.getEvents(requestParams)
+              this.server.getEvents(requestParams),
             );
 
           const events = eventsResponse.events || [];
@@ -86,47 +87,53 @@ export class IndexerService {
           const eventsToProcess = events.filter((e) => e.ledger <= toLedger);
 
           if (eventsToProcess.length > 0) {
-            const eventsToSave = eventsToProcess.map((event: any, index: number) => {
-              let parsedArgs = {};
-              try {
-                if (event.value) {
-                  parsedArgs = scValToNative(event.value);
-                }
-              } catch (e) {
-                parsedArgs = {};
-              }
-
-              const topics = event.topic.map((t: any) => {
+            const eventsToSave = eventsToProcess.map(
+              (event: any, index: number) => {
+                let parsedArgs = {};
                 try {
-                  const val = scValToNative(t);
-                  return typeof val === 'string' ? val : JSON.stringify(val);
+                  if (event.value) {
+                    parsedArgs = scValToNative(event.value);
+                  }
                 } catch (e) {
-                  return '';
+                  parsedArgs = {};
                 }
-              });
 
-              const eventName = topics.length > 0 ? topics[0] : 'Unknown';
+                const topics = event.topic.map((t: any) => {
+                  try {
+                    const val = scValToNative(t);
+                    return typeof val === 'string' ? val : JSON.stringify(val);
+                  } catch (e) {
+                    return '';
+                  }
+                });
 
-              let eventIndex = index;
-              if (event.id && typeof event.id === 'string' && event.id.includes('-')) {
-                const parts = event.id.split('-');
-                if (parts.length > 1) {
-                  eventIndex = parseInt(parts[1], 10) || index;
+                const eventName = topics.length > 0 ? topics[0] : 'Unknown';
+
+                let eventIndex = index;
+                if (
+                  event.id &&
+                  typeof event.id === 'string' &&
+                  event.id.includes('-')
+                ) {
+                  const parts = event.id.split('-');
+                  if (parts.length > 1) {
+                    eventIndex = parseInt(parts[1], 10) || index;
+                  }
                 }
-              }
 
-              return {
-                contractAddress: event.contractId.toLowerCase(),
-                eventName,
-                ledgerSequence: event.ledger,
-                transactionHash: event.txHash,
-                eventIndex,
-                topics,
-                data: JSON.stringify(parsedArgs),
-                args: parsedArgs,
-                timestamp: new Date(event.ledgerClosedAt),
-              };
-            });
+                return {
+                  contractAddress: event.contractId.toLowerCase(),
+                  eventName,
+                  ledgerSequence: event.ledger,
+                  transactionHash: event.txHash,
+                  eventIndex,
+                  topics,
+                  data: JSON.stringify(parsedArgs),
+                  args: parsedArgs,
+                  timestamp: new Date(event.ledgerClosedAt),
+                };
+              },
+            );
 
             for (const ev of eventsToSave) {
               try {
@@ -137,7 +144,7 @@ export class IndexerService {
                     eventIndex: ev.eventIndex,
                   },
                   { $setOnInsert: ev },
-                  { upsert: true }
+                  { upsert: true },
                 );
               } catch (err: any) {
                 if (err.code !== 11000) {
@@ -160,13 +167,12 @@ export class IndexerService {
 
         fromLedger = toLedger + 1;
       }
-    } catch (error) {
-    }
+    } catch (error) {}
   }
 
   private async executeWithRetry<T>(
     operation: () => Promise<T>,
-    maxRetries = 5
+    maxRetries = 5,
   ): Promise<T> {
     let attempt = 0;
     while (attempt < maxRetries) {
