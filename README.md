@@ -74,6 +74,13 @@ Tests are written using Jest and live inside the src/tests directory.
 
 ---
 
+## 📚 Additional Documentation
+
+- [Developer Infrastructure API](docs/developer-api.md) — public `/api/v1/developer/*` endpoints for third-party apps (ticket availability, ticket verification, attendance credential verification), API key auth, and rate limiting.
+- [Data Retention & Compliance](docs/compliance/data-retention.md)
+
+---
+
 ## **Logging & Security**
 
 - **Centralized sanitizer**: A structured logger is initialized at startup in `src/utils/logger.ts`. It overrides console methods to emit JSON logs with fields `{ timestamp, level, message, data }`.
