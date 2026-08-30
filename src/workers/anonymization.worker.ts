@@ -70,14 +70,17 @@ const anonymizationWorker = new Worker(
 
     switch (name as AnonymizationJobType) {
       case AnonymizationJobType.POST_EVENT_ANONYMIZE: {
+        const rawOverride = data.retentionDaysOverride;
         const retentionDays =
-          data.retentionDaysOverride ??
-          (parseInt(process.env.RETENTION_DAYS || '', 10) ||
-            DEFAULT_RETENTION_DAYS);
-        const report = await runPostEventAnonymization(
-          retentionDays,
-          'retention_expired',
-        );
+          rawOverride != null &&
+          Number.isFinite(rawOverride) &&
+          rawOverride >= 0
+            ? rawOverride
+            : parseInt(process.env.RETENTION_DAYS || '', 10) ||
+              DEFAULT_RETENTION_DAYS;
+        const trigger =
+          data.triggeredBy === 'manual' ? 'manual' : 'retention_expired';
+        const report = await runPostEventAnonymization(retentionDays, trigger);
         return report;
       }
 
@@ -87,6 +90,7 @@ const anonymizationWorker = new Worker(
   },
   {
     connection: redisConfig as any,
+    autorun: false, // Started explicitly after DB init in start.ts
     concurrency: 1, // Only one anonymization run at a time
     removeOnComplete: { age: 3600 },
     removeOnFail: { age: 86400 },
@@ -99,7 +103,7 @@ anonymizationWorker.on('completed', (job, result) => {
     logger.info(
       `[AnonymizationWorker] ✓ Run complete — scanned: ${r.eventsScanned}, ` +
         `eligible: ${r.eventsEligible}, ` +
-        `ordersRedacted: ${r.ordersRedacted}, ` +
+        `ordersScanned: ${r.ordersScanned}, ` +
         `usersRedacted: ${r.usersRedacted}, ` +
         `auditLogs: ${r.auditLogsCreated}, ` +
         `duration: ${r.durationMs}ms`,
@@ -115,4 +119,5 @@ anonymizationWorker.on('error', (err) => {
   logger.error('[AnonymizationWorker] Worker error:', err);
 });
 
+export { anonymizationWorker };
 export default anonymizationWorker;

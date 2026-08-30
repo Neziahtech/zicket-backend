@@ -13,6 +13,7 @@ import indexerWorker from './workers/indexer.worker';
 import waitlistWorker from './workers/waitlist.worker';
 import anonymizationWorker, {
   initializeAnonymizationWorker,
+  anonymizationQueue,
 } from './workers/anonymization.worker';
 import logger from './utils/logger';
 
@@ -56,6 +57,7 @@ async function startServer() {
 
     // Anonymization worker (post-event PII redaction)
     await initializeAnonymizationWorker();
+    await anonymizationWorker.run();
     logger.info('Anonymization worker initialized');
 
     // Start Express server
@@ -76,6 +78,7 @@ async function startServer() {
         ['reconciliationWorker', () => reconciliationWorker.close()],
         ['waitlistWorker', () => waitlistWorker.close()],
         ['anonymizationWorker', () => anonymizationWorker.close()],
+        ['anonymizationQueue', () => anonymizationQueue.close()],
         ['retentionWorker', () => retentionWorker.close()],
         ['indexerWorker', () => Promise.resolve(indexerWorker.stop())],
         ['queueService', () => queueService.close()],

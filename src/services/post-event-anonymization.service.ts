@@ -80,12 +80,19 @@ async function anonymizeEventAttendees(
   eventName: string,
   method: 'sha256' | 'placeholder',
   trigger: 'retention_expired' | 'manual',
-): Promise<{ ordersScanned: number; usersRedacted: number }> {
-  // 1. Find completed ticket orders for this event
-  const orders = await TicketOrder.find({ eventTicket: eventId }).lean();
+): Promise<{
+  ordersScanned: number;
+  usersRedacted: number;
+  usersSkippedActive: number;
+}> {
+  // 1. Find completed ticket orders for this event (status 1 = completed)
+  const orders = await TicketOrder.find({
+    eventTicket: eventId,
+    status: 1,
+  }).lean();
 
   if (orders.length === 0) {
-    return { ordersScanned: 0, usersRedacted: 0 };
+    return { ordersScanned: 0, usersRedacted: 0, usersSkippedActive: 0 };
   }
 
   // 2. Collect unique user IDs from these orders
@@ -97,7 +104,11 @@ async function anonymizeEventAttendees(
   const eligibleUserIds = userIds.filter((id) => !activeUserIds.has(id));
 
   if (eligibleUserIds.length === 0) {
-    return { ordersScanned: orders.length, usersRedacted: 0 };
+    return {
+      ordersScanned: orders.length,
+      usersRedacted: 0,
+      usersSkippedActive: activeUserIds.size,
+    };
   }
 
   // 4. Anonymize each eligible user's PII
@@ -155,7 +166,11 @@ async function anonymizeEventAttendees(
       `${userIds.length - usersRedacted} user(s) skipped (active on other events or already anonymized).`,
   });
 
-  return { ordersScanned: orders.length, usersRedacted };
+  return {
+    ordersScanned: orders.length,
+    usersRedacted,
+    usersSkippedActive: activeUserIds.size,
+  };
 }
 
 /**
@@ -230,15 +245,20 @@ export async function runPostEventAnonymization(
 
   let ordersScanned = 0;
   let usersRedacted = 0;
+  let usersSkippedActive = 0;
   let auditLogsCreated = 0;
 
   // 3. Process each eligible event
   for (const event of eligibleEvents) {
-    const { ordersScanned: o, usersRedacted: u } =
-      await anonymizeEventAttendees(event._id, event.name, 'sha256', trigger);
+    const {
+      ordersScanned: o,
+      usersRedacted: u,
+      usersSkippedActive: s,
+    } = await anonymizeEventAttendees(event._id, event.name, 'sha256', trigger);
 
     ordersScanned += o;
     usersRedacted += u;
+    usersSkippedActive += s;
     if (u > 0) {
       auditLogsCreated++;
     }
@@ -250,7 +270,7 @@ export async function runPostEventAnonymization(
     eventsSkippedActive: activeEvents.length,
     ordersScanned,
     usersRedacted,
-    usersSkippedActive: 0, // calculated per-event in anonymizeEventAttendees
+    usersSkippedActive,
     auditLogsCreated,
     durationMs: Date.now() - startTime,
   };

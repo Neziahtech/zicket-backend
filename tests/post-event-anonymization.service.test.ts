@@ -289,6 +289,7 @@ describe('Post-Event Anonymization Service', () => {
       expect(report.eventsEligible).toBe(1);
       expect(report.ordersScanned).toBe(1);
       expect(report.usersRedacted).toBe(0);
+      expect(report.usersSkippedActive).toBe(1);
 
       // User should NOT have been touched
       expect(mockUser.findById).not.toHaveBeenCalled();
@@ -402,6 +403,66 @@ describe('Post-Event Anonymization Service', () => {
       expect(report.eventsEligible).toBe(1);
       expect(report.ordersScanned).toBe(0);
       expect(report.usersRedacted).toBe(0);
+    });
+
+    it('preserves manual trigger in audit log', async () => {
+      jest.setSystemTime(new Date('2026-07-15T12:00:00Z'));
+
+      const eventId = new mongoose.Types.ObjectId();
+      const userId = new mongoose.Types.ObjectId();
+
+      (mockEventTicket.find as jest.Mock).mockImplementation((query: any) => {
+        if (query.eventStatus === 'completed') {
+          return buildFindChain([
+            {
+              _id: eventId,
+              name: 'Manual Run Event',
+              eventDate: new Date('2026-05-01'),
+              eventStatus: 'completed',
+              privacyLevel: 1,
+            },
+          ]);
+        }
+        return buildFindChain([]);
+      });
+
+      (mockTicketOrder.find as jest.Mock).mockImplementation((query: any) => {
+        if (query.eventTicket?.toString() === eventId.toString()) {
+          return {
+            lean: jest.fn().mockResolvedValue([
+              {
+                _id: new mongoose.Types.ObjectId(),
+                user: userId,
+                eventTicket: eventId,
+                status: 1,
+                amount: 10,
+              },
+            ]),
+          };
+        }
+        return { lean: jest.fn().mockResolvedValue([]) };
+      });
+
+      const mockUserInstance = {
+        _id: userId,
+        name: 'Bob User',
+        email: 'bob@example.com',
+        anonymizedAt: null,
+        save: jest.fn().mockResolvedValue(undefined),
+      };
+      (mockUser.findById as jest.Mock).mockResolvedValue(mockUserInstance);
+      (mockPrivacyAuditLog.create as jest.Mock).mockResolvedValue({});
+
+      const report = await runPostEventAnonymization(30, 'manual');
+
+      expect(report.usersRedacted).toBe(1);
+
+      // Verify audit log uses 'manual' trigger, not 'retention_expired'
+      expect(mockPrivacyAuditLog.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          trigger: 'manual',
+        }),
+      );
     });
   });
 });
