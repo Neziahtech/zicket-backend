@@ -10,6 +10,7 @@ import {
   runPostEventAnonymization,
   DEFAULT_RETENTION_DAYS,
 } from '../services/post-event-anonymization.service';
+import logger from '../utils/logger';
 
 /**
  * #179 — Post-Event Anonymization Worker
@@ -51,7 +52,7 @@ export async function initializeAnonymizationWorker(): Promise<void> {
     opts,
   );
 
-  console.log(
+  logger.info(
     `[AnonymizationWorker] Repeatable job registered — pattern: ${opts.repeat.pattern}`,
   );
 }
@@ -63,7 +64,7 @@ const anonymizationWorker = new Worker(
   async (job: Job<PostEventAnonymizePayload>) => {
     const { name, data } = job;
 
-    console.log(
+    logger.info(
       `[AnonymizationWorker] Starting run — triggeredBy: ${data.triggeredBy}`,
     );
 
@@ -79,7 +80,7 @@ const anonymizationWorker = new Worker(
       }
 
       default:
-        console.warn(`[AnonymizationWorker] Unknown job type: ${name}`);
+        logger.warn(`[AnonymizationWorker] Unknown job type: ${name}`);
     }
   },
   {
@@ -93,7 +94,7 @@ const anonymizationWorker = new Worker(
 anonymizationWorker.on('completed', (job, result) => {
   const r = result as any;
   if (r) {
-    console.log(
+    logger.info(
       `[AnonymizationWorker] ✓ Run complete — scanned: ${r.eventsScanned}, ` +
         `eligible: ${r.eventsEligible}, ` +
         `ordersRedacted: ${r.ordersRedacted}, ` +
@@ -105,11 +106,11 @@ anonymizationWorker.on('completed', (job, result) => {
 });
 
 anonymizationWorker.on('failed', (job, err) => {
-  console.error(`[AnonymizationWorker] Job ${job?.id} failed: ${err.message}`);
+  logger.error(`[AnonymizationWorker] Job ${job?.id} failed: ${err.message}`);
 });
 
 anonymizationWorker.on('error', (err) => {
-  console.error('[AnonymizationWorker] Worker error:', err);
+  logger.error('[AnonymizationWorker] Worker error:', err);
 });
 
 export default anonymizationWorker;

@@ -2,6 +2,7 @@ import { ethers } from 'ethers';
 import { BlockchainProvider } from '../provider/blockchain.provider';
 import ContractEvent from '../models/contract-event';
 import IndexerState from '../models/indexer-state';
+import logger from '../utils/logger';
 
 export class IndexerService {
   private static instance: IndexerService;
@@ -18,7 +19,7 @@ export class IndexerService {
 
   async syncEvents() {
     if (!this.contractAddress) {
-      console.warn(
+      logger.warn(
         '[Indexer] No INDEXER_CONTRACT_ADDRESS configured. Skipping sync.',
       );
       return;
@@ -48,7 +49,7 @@ export class IndexerService {
         let toBlock = fromBlock + this.maxBlockRange - 1;
         if (toBlock > currentBlock) toBlock = currentBlock;
 
-        console.log(
+        logger.info(
           `[Indexer] Syncing events for ${this.contractAddress} from block ${fromBlock} to ${toBlock}`,
         );
 
@@ -76,7 +77,7 @@ export class IndexerService {
           } catch (err: any) {
             // E11000 duplicate key error is expected if we re-index an overlapping range
             if (err.code !== 11000) {
-              console.error('[Indexer] Error saving events:', err);
+              logger.error('[Indexer] Error saving events:', err);
               throw err;
             }
           }
@@ -88,7 +89,7 @@ export class IndexerService {
         fromBlock = toBlock + 1;
       }
     } catch (error) {
-      console.error('[Indexer] Sync failed:', error);
+      logger.error('[Indexer] Sync failed:', error);
     }
   }
 }

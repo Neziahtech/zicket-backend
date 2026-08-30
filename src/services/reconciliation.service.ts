@@ -9,6 +9,7 @@ import {
   TransactionStateMachine,
   TransactionEvent,
 } from '../state-machine/transaction.state-machine';
+import logger from '../utils/logger';
 
 /**
  * #78 #80 — Blockchain Transaction Reconciliation Service
@@ -72,7 +73,7 @@ export class ReconciliationService {
       return report;
     }
 
-    console.log(
+    logger.info(
       `[Reconciliation] Scanning ${pendingTxs.length} stale pending transactions...`,
     );
 
@@ -112,7 +113,7 @@ export class ReconciliationService {
           } else {
             report.failed++;
           }
-          console.log(
+          logger.info(
             `[Reconciliation] tx ${tx.transactionId} → ${result.newState}`,
           );
         } else {
@@ -121,13 +122,13 @@ export class ReconciliationService {
       } catch (error) {
         const msg = `Failed to reconcile tx ${tx.transactionId}: ${error instanceof Error ? error.message : 'Unknown'}`;
         report.errors.push(msg);
-        console.error(`[Reconciliation] ${msg}`);
+        logger.error(`[Reconciliation] ${msg}`);
       }
     }
 
     report.durationMs = Date.now() - startTime;
 
-    console.log(
+    logger.info(
       `[Reconciliation] Done in ${report.durationMs}ms — ` +
         `confirmed: ${report.confirmed}, failed: ${report.failed}, ` +
         `skipped: ${report.skipped}, errors: ${report.errors.length}`,
@@ -156,7 +157,7 @@ export class ReconciliationService {
     };
 
     if (!isPaymentsContractConfigured()) {
-      console.warn(
+      logger.warn(
         '[Reconciliation] Skipping cancelled-event sync — Soroban contract not configured',
       );
       return localReport;
@@ -215,7 +216,7 @@ export class ReconciliationService {
               error instanceof Error ? error.message : 'Unknown'
             }`;
             localReport.errors.push(msg);
-            console.error(`[Reconciliation] ${msg}`);
+            logger.error(`[Reconciliation] ${msg}`);
           }
         }
       } catch (error) {
@@ -223,7 +224,7 @@ export class ReconciliationService {
           error instanceof Error ? error.message : 'Unknown'
         }`;
         localReport.errors.push(msg);
-        console.error(`[Reconciliation] ${msg}`);
+        logger.error(`[Reconciliation] ${msg}`);
       }
     }
 

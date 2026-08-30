@@ -1,5 +1,6 @@
 import rateLimit from 'express-rate-limit';
 import { Request, Response } from 'express';
+import logger from '../utils/logger';
 
 // Enhanced rate limiter with custom key generator for email-based limiting
 const createEmailBasedLimiter = (
@@ -24,7 +25,7 @@ const createEmailBasedLimiter = (
     },
     // Custom handler for rate limit exceeded
     handler: (req: Request, res: Response) => {
-      console.warn(`Rate limit exceeded for ${req.ip} on ${req.path}`, {
+      logger.warn(`Rate limit exceeded for ${req.ip} on ${req.path}`, {
         ip: req.ip,
         path: req.path,
         userAgent: req.get('User-Agent'),
@@ -65,7 +66,7 @@ const createIpBasedLimiter = (
     standardHeaders: true,
     legacyHeaders: false,
     handler: (req: Request, res: Response) => {
-      console.warn(`Rate limit exceeded for ${req.ip} on ${req.path}`, {
+      logger.warn(`Rate limit exceeded for ${req.ip} on ${req.path}`, {
         ip: req.ip,
         path: req.path,
         userAgent: req.get('User-Agent'),
@@ -114,7 +115,7 @@ const createAnonymousActionLimiter = (
       return `${ip}:${sessionFingerprint}`;
     },
     handler: (req: Request, res: Response) => {
-      console.warn(
+      logger.warn(
         `Anonymous rate limit exceeded for ${req.ip} on ${req.path}`,
         {
           ip: req.ip,

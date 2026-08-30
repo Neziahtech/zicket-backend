@@ -1,4 +1,5 @@
 import { ethers } from 'ethers';
+import logger from '../utils/logger';
 
 /**
  * Shared by #75, #81, #78 — single source of truth for on-chain reads.
@@ -66,7 +67,7 @@ export class BlockchainProvider {
         status,
       };
     } catch (err) {
-      console.error(`[BlockchainProvider] Error fetching tx ${txHash}:`, err);
+      logger.error(`[BlockchainProvider] Error fetching tx ${txHash}:`, err);
       return null;
     }
   }

@@ -14,6 +14,7 @@ import waitlistWorker from './workers/waitlist.worker';
 import anonymizationWorker, {
   initializeAnonymizationWorker,
 } from './workers/anonymization.worker';
+import logger from './utils/logger';
 
 async function startServer() {
   try {
@@ -22,48 +23,48 @@ async function startServer() {
 
     // Connect to MongoDB
     await mongoConnect();
-    console.log('âœ“ MongoDB connected');
+    logger.info('âœ“ MongoDB connected');
 
     // Initialize queue service
     await queueService.initialize();
-    console.log('âœ“ Queue service initialized');
+    logger.info('âœ“ Queue service initialized');
 
     // Initialize email worker
     await emailWorker.initialize();
-    console.log('âœ“ Email worker initialized');
+    logger.info('âœ“ Email worker initialized');
 
     // Initialize zkEmail worker
     await zkEmailWorker.initialize();
-    console.log('âœ“ zkEmail worker initialized');
+    logger.info('âœ“ zkEmail worker initialized');
 
     // Initialize indexer worker
     await indexerWorker.initialize();
-    console.log('âœ“ Indexer worker initialized');
+    logger.info('âœ“ Indexer worker initialized');
 
     // Payment worker (processes webhook events via state machine)
-    console.log('âœ“ Payment worker initialized');
+    logger.info('âœ“ Payment worker initialized');
 
     // Reconciliation worker (periodic stale-tx cleanup via state machine)
-    console.log('âœ“ Reconciliation worker initialized');
+    logger.info('âœ“ Reconciliation worker initialized');
 
     // Retention worker (TTL hygiene + anonymization job retries)
     await initializeRetentionWorker();
-    console.log('âœ“ Retention worker initialized');
+    logger.info('âœ“ Retention worker initialized');
 
     await waitlistWorker.initialize();
-    console.log('Waitlist worker initialized');
+    logger.info('Waitlist worker initialized');
 
     // Anonymization worker (post-event PII redaction)
     await initializeAnonymizationWorker();
-    console.log('Anonymization worker initialized');
+    logger.info('Anonymization worker initialized');
 
     // Start Express server
     const server = app.listen(config.port, () => {
-      console.log(`âœ“ Server running on port ${config.port}`);
+      logger.info(`âœ“ Server running on port ${config.port}`);
     });
 
     server.on('error', (error) => {
-      console.error('Failed to start server:', error);
+      logger.error('Failed to start server:', error);
       void closeAllServices().finally(() => process.exit(1));
     });
 
@@ -86,7 +87,7 @@ async function startServer() {
           await close();
         } catch (error) {
           hadError = true;
-          console.error(`Failed to close ${name}:`, error);
+          logger.error(`Failed to close ${name}:`, error);
         }
       }
       return hadError;
@@ -94,11 +95,11 @@ async function startServer() {
 
     // Graceful shutdown
     const gracefulShutdown = async () => {
-      console.log('\nðŸ›‘ Shutting down gracefully...');
+      logger.info('\nðŸ›‘ Shutting down gracefully...');
       server.close(async () => {
-        console.log('Express server stopped');
+        logger.info('Express server stopped');
         const hadError = await closeAllServices();
-        console.log(
+        logger.info(
           hadError ? 'Some services failed to close' : 'All services closed',
         );
         process.exit(hadError ? 1 : 0);
@@ -106,7 +107,7 @@ async function startServer() {
 
       // Force shutdown after 10 seconds
       setTimeout(() => {
-        console.error('Forced shutdown after timeout');
+        logger.error('Forced shutdown after timeout');
         process.exit(1);
       }, 10000);
     };
@@ -114,7 +115,7 @@ async function startServer() {
     process.on('SIGTERM', gracefulShutdown);
     process.on('SIGINT', gracefulShutdown);
   } catch (error) {
-    console.error('Failed to start server:', error);
+    logger.error('Failed to start server:', error);
     process.exit(1);
   }
 }
