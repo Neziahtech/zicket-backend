@@ -24,7 +24,7 @@ export const getEvents = async (req: Request, res: Response) => {
 
     const [events, total] = await Promise.all([
       ContractEvent.find(query)
-        .sort({ blockNumber: -1, logIndex: -1 })
+        .sort({ ledgerSequence: -1, eventIndex: -1 })
         .skip(skip)
         .limit(limitNum)
         .lean(),

@@ -1,5 +1,4 @@
-import { ethers } from 'ethers';
-import { BlockchainProvider } from '../provider/blockchain.provider';
+import { rpc, scValToNative } from '@stellar/stellar-sdk';
 import ContractEvent from '../models/contract-event';
 import IndexerState from '../models/indexer-state';
 import logger from '../utils/logger';
@@ -10,7 +9,14 @@ export class IndexerService {
   private contractAddress = (
     process.env.INDEXER_CONTRACT_ADDRESS || ''
   ).toLowerCase();
-  private maxBlockRange = 2000;
+  private rpcUrl =
+    process.env.SOROBAN_RPC_URL || process.env.BLOCKCHAIN_RPC_URL || '';
+  private maxLedgerRange = 10000;
+  private server: rpc.Server;
+
+  private constructor() {
+    this.server = new rpc.Server(this.rpcUrl);
+  }
 
   static getInstance(): IndexerService {
     if (!this.instance) this.instance = new IndexerService();
@@ -18,16 +24,18 @@ export class IndexerService {
   }
 
   async syncEvents() {
-    if (!this.contractAddress) {
+    if (!this.contractAddress || !this.rpcUrl) {
       logger.warn(
-        '[Indexer] No INDEXER_CONTRACT_ADDRESS configured. Skipping sync.',
+        '[Indexer] No INDEXER_CONTRACT_ADDRESS or SOROBAN_RPC_URL configured. Skipping sync.',
       );
       return;
     }
 
     try {
-      const provider = BlockchainProvider.getInstance().getProvider();
-      const currentBlock = await provider.getBlockNumber();
+      const latestLedgerResponse = await this.executeWithRetry(() =>
+        this.server.getLatestLedger(),
+      );
+      const currentLedger = latestLedgerResponse.sequence;
 
       let state = await IndexerState.findOne({
         contractAddress: this.contractAddress,
@@ -35,62 +43,161 @@ export class IndexerService {
       if (!state) {
         state = new IndexerState({
           contractAddress: this.contractAddress,
-          lastIndexedBlock: currentBlock - 100, // Default to past 100 blocks
+          lastIndexedLedger: currentLedger - 100,
         });
       }
 
-      let fromBlock = state.lastIndexedBlock + 1;
+      let fromLedger = state.lastIndexedLedger + 1;
 
-      if (fromBlock > currentBlock) {
-        return; // Already up to date
+      if (fromLedger > currentLedger) {
+        return;
       }
 
-      while (fromBlock <= currentBlock) {
-        let toBlock = fromBlock + this.maxBlockRange - 1;
-        if (toBlock > currentBlock) toBlock = currentBlock;
+      while (fromLedger <= currentLedger) {
+        let toLedger = fromLedger + this.maxLedgerRange - 1;
+        if (toLedger > currentLedger) toLedger = currentLedger;
 
         logger.info(
-          `[Indexer] Syncing events for ${this.contractAddress} from block ${fromBlock} to ${toBlock}`,
+          `[Indexer] Syncing events for ${this.contractAddress} from ledger ${fromLedger} to ${toLedger}`,
         );
+        let cursor: string | undefined = undefined;
+        let hasMore = true;
 
-        const logs = await provider.getLogs({
-          address: this.contractAddress,
-          fromBlock,
-          toBlock,
-        });
+        while (hasMore) {
+          const requestParams: any = {
+            filters: [
+              {
+                type: 'contract',
+                contractIds: [this.contractAddress],
+              },
+            ],
+            limit: 100,
+          };
+          if (cursor) {
+            requestParams.cursor = cursor;
+          } else {
+            requestParams.startLedger = fromLedger;
+          }
 
-        if (logs.length > 0) {
-          // Ideally fetch block timestamps here, but we'll use current date as fallback
-          const eventsToSave = logs.map((log: any) => ({
-            contractAddress: log.address.toLowerCase(),
-            eventName: log.topics[0] || 'Unknown',
-            blockNumber: log.blockNumber,
-            transactionHash: log.transactionHash,
-            logIndex: log.index,
-            topics: log.topics,
-            data: log.data,
-            timestamp: new Date(),
-          }));
+          const eventsResponse: rpc.Api.GetEventsResponse =
+            await this.executeWithRetry(() =>
+              this.server.getEvents(requestParams),
+            );
 
-          try {
-            await ContractEvent.insertMany(eventsToSave, { ordered: false });
-          } catch (err: any) {
-            // E11000 duplicate key error is expected if we re-index an overlapping range
-            if (err.code !== 11000) {
-              logger.error('[Indexer] Error saving events:', err);
-              throw err;
+          const events = eventsResponse.events || [];
+
+          if (events.length === 0) {
+            hasMore = false;
+            break;
+          }
+
+          const eventsToProcess = events.filter((e) => e.ledger <= toLedger);
+
+          if (eventsToProcess.length > 0) {
+            const eventsToSave = eventsToProcess.map(
+              (event: any, index: number) => {
+                let parsedArgs = {};
+                try {
+                  if (event.value) {
+                    parsedArgs = scValToNative(event.value);
+                  }
+                } catch (e) {
+                  parsedArgs = {};
+                }
+
+                const topics = event.topic.map((t: any) => {
+                  try {
+                    const val = scValToNative(t);
+                    return typeof val === 'string' ? val : JSON.stringify(val);
+                  } catch (e) {
+                    return '';
+                  }
+                });
+
+                const eventName = topics.length > 0 ? topics[0] : 'Unknown';
+
+                let eventIndex = index;
+                if (
+                  event.id &&
+                  typeof event.id === 'string' &&
+                  event.id.includes('-')
+                ) {
+                  const parts = event.id.split('-');
+                  if (parts.length > 1) {
+                    eventIndex = parseInt(parts[1], 10) || index;
+                  }
+                }
+
+                return {
+                  contractAddress: event.contractId
+                    ? event.contractId.toString().toLowerCase()
+                    : this.contractAddress,
+                  eventName,
+                  ledgerSequence: event.ledger,
+                  transactionHash: event.txHash,
+                  eventIndex,
+                  topics,
+                  data: JSON.stringify(parsedArgs),
+                  args: parsedArgs,
+                  timestamp: new Date(event.ledgerClosedAt),
+                };
+              },
+            );
+
+            for (const ev of eventsToSave) {
+              try {
+                await ContractEvent.updateOne(
+                  {
+                    transactionHash: ev.transactionHash,
+                    ledgerSequence: ev.ledgerSequence,
+                    eventIndex: ev.eventIndex,
+                  },
+                  { $setOnInsert: ev },
+                  { upsert: true },
+                );
+              } catch (err: any) {
+                if (err.code !== 11000) {
+                  logger.error('[Indexer] Error saving event:', err);
+                  throw err;
+                }
+              }
             }
+          }
+
+          const lastEvent = events[events.length - 1];
+          if (lastEvent.ledger > toLedger) {
+            hasMore = false;
+          } else {
+            cursor = eventsResponse.cursor;
           }
         }
 
-        state.lastIndexedBlock = toBlock;
+        state.lastIndexedLedger = toLedger;
         await state.save();
 
-        fromBlock = toBlock + 1;
+        fromLedger = toLedger + 1;
       }
     } catch (error) {
       logger.error('[Indexer] Sync failed:', error);
     }
+  }
+
+  private async executeWithRetry<T>(
+    operation: () => Promise<T>,
+    maxRetries = 5,
+  ): Promise<T> {
+    let attempt = 0;
+    while (attempt < maxRetries) {
+      try {
+        return await operation();
+      } catch (error) {
+        attempt++;
+        if (attempt >= maxRetries) throw error;
+        const delay = Math.pow(2, attempt) * 1000;
+        await new Promise((resolve) => setTimeout(resolve, delay));
+      }
+    }
+    throw new Error('Retry failed');
   }
 }
 

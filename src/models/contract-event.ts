@@ -3,9 +3,9 @@ import mongoose, { Document, Schema } from 'mongoose';
 export interface IContractEvent extends Document {
   contractAddress: string;
   eventName: string;
-  blockNumber: number;
+  ledgerSequence: number;
   transactionHash: string;
-  logIndex: number;
+  eventIndex: number;
   topics: string[];
   data: string;
   /**
@@ -37,7 +37,7 @@ const contractEventSchema = new Schema<IContractEvent>(
       required: true,
       index: true,
     },
-    blockNumber: {
+    ledgerSequence: {
       type: Number,
       required: true,
       index: true,
@@ -47,7 +47,7 @@ const contractEventSchema = new Schema<IContractEvent>(
       required: true,
       index: true,
     },
-    logIndex: {
+    eventIndex: {
       type: Number,
       required: true,
     },
@@ -75,7 +75,7 @@ const contractEventSchema = new Schema<IContractEvent>(
 
 // Compound index for idempotency
 contractEventSchema.index(
-  { transactionHash: 1, logIndex: 1 },
+  { transactionHash: 1, ledgerSequence: 1, eventIndex: 1 },
   { unique: true },
 );
 
