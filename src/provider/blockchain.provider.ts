@@ -22,9 +22,16 @@ export interface ChainTransaction {
   status: 'pending' | 'confirmed' | 'failed';
 }
 
+export interface SorobanTransactionStatusResult {
+  status: 'SUCCESS' | 'FAILED' | 'NOT_FOUND';
+  ledger?: number;
+  createdAt?: number;
+}
+
 export class BlockchainProvider {
   private provider: ethers.JsonRpcProvider;
   private static _instance: BlockchainProvider | null = null;
+  private sorobanServer: any = null;
 
   private constructor() {
     if (!RPC_URL)
@@ -35,6 +42,48 @@ export class BlockchainProvider {
   static getInstance(): BlockchainProvider {
     if (!this._instance) this._instance = new BlockchainProvider();
     return this._instance;
+  }
+
+  private getSorobanServer(): any {
+    if (!this.sorobanServer) {
+      const sorobanRpcUrl = process.env.SOROBAN_RPC_URL;
+      if (!sorobanRpcUrl) {
+        throw new Error('SOROBAN_RPC_URL is not configured in .env');
+      }
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const { rpc } = require('@stellar/stellar-sdk');
+      this.sorobanServer = new rpc.Server(sorobanRpcUrl, {
+        allowHttp: sorobanRpcUrl.startsWith('http://'),
+      });
+    }
+    return this.sorobanServer;
+  }
+
+  async fetchSorobanTransactionStatus(
+    txHash: string,
+  ): Promise<SorobanTransactionStatusResult> {
+    const server = this.getSorobanServer();
+    const response = await server.getTransaction(txHash);
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { rpc } = require('@stellar/stellar-sdk');
+
+    if (response.status === rpc.Api.GetTransactionStatus.SUCCESS) {
+      return {
+        status: 'SUCCESS',
+        ledger: response.ledger,
+        createdAt: response.createdAt,
+      };
+    } else if (response.status === rpc.Api.GetTransactionStatus.FAILED) {
+      return {
+        status: 'FAILED',
+        ledger: response.ledger,
+        createdAt: response.createdAt,
+      };
+    } else {
+      return {
+        status: 'NOT_FOUND',
+      };
+    }
   }
 
   async fetchTransaction(txHash: string): Promise<ChainTransaction | null> {
