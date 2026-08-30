@@ -24,7 +24,7 @@ jest.mock('@stellar/stellar-sdk', () => {
       toString() {
         return this.id;
       }
-    }
+    },
   };
 });
 
@@ -85,7 +85,9 @@ describe('IndexerService', () => {
             type: 'contract',
             ledger: 950,
             ledgerClosedAt: '2023-10-01T12:00:00Z',
-            contractId: new Contract(process.env.INDEXER_CONTRACT_ADDRESS as string),
+            contractId: new Contract(
+              process.env.INDEXER_CONTRACT_ADDRESS as string,
+            ),
             id: '00000001-00000001',
             inSuccessfulContractCall: true,
             topic: [nativeToScVal('TicketMinted')],
@@ -139,7 +141,9 @@ describe('IndexerService', () => {
             type: 'contract',
             ledger: 1010,
             ledgerClosedAt: '2023-10-01T12:05:00Z',
-            contractId: new Contract(process.env.INDEXER_CONTRACT_ADDRESS as string),
+            contractId: new Contract(
+              process.env.INDEXER_CONTRACT_ADDRESS as string,
+            ),
             id: '00000002-00000001',
             inSuccessfulContractCall: true,
             topic: [nativeToScVal('PaymentProcessed')],
