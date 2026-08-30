@@ -16,6 +16,15 @@ jest.mock('@stellar/stellar-sdk', () => {
     __mockServer: mockServer,
     nativeToScVal: jest.fn((val) => val),
     scValToNative: jest.fn((val) => val),
+    Contract: class {
+      id: string;
+      constructor(id: string) {
+        this.id = id;
+      }
+      toString() {
+        return this.id;
+      }
+    }
   };
 });
 
