@@ -18,6 +18,7 @@ import indexerRoutes from './routes/indexer.route';
 import privacyComplianceRoutes from './routes/privacy-compliance.route';
 import accountRoutes from './routes/account.route';
 import verifyAttendRoutes from './routes/verify-attend.route';
+import developerRoutes from './routes/developer.route';
 import { globalErrorHandler } from './middlewares/errorHandler';
 
 const app = express();
@@ -66,6 +67,11 @@ app.use('/api/events', indexerRoutes);
 app.use('/compliance', privacyComplianceRoutes);
 app.use('/account', accountRoutes);
 app.use('/events', verifyAttendRoutes);
+
+// BR-09 / Section 12 — public developer infrastructure API.
+// Auth is per-request via X-Zicket-API-Key (developerAuthGuard), not JWT.
+app.use('/api/v1/developer', developerRoutes);
+
 app.use(protectedRoute);
 
 app.use(globalErrorHandler);
