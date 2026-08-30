@@ -1,5 +1,5 @@
 import mongoose from 'mongoose';
-import { rpc, nativeToScVal } from '@stellar/stellar-sdk';
+import { rpc, nativeToScVal, Contract } from '@stellar/stellar-sdk';
 import IndexerService from '../src/services/indexer.service';
 import ContractEvent from '../src/models/contract-event';
 import IndexerState from '../src/models/indexer-state';
@@ -76,7 +76,7 @@ describe('IndexerService', () => {
             type: 'contract',
             ledger: 950,
             ledgerClosedAt: '2023-10-01T12:00:00Z',
-            contractId: process.env.INDEXER_CONTRACT_ADDRESS,
+            contractId: new Contract(process.env.INDEXER_CONTRACT_ADDRESS as string),
             id: '00000001-00000001',
             inSuccessfulContractCall: true,
             topic: [nativeToScVal('TicketMinted')],
@@ -130,7 +130,7 @@ describe('IndexerService', () => {
             type: 'contract',
             ledger: 1010,
             ledgerClosedAt: '2023-10-01T12:05:00Z',
-            contractId: process.env.INDEXER_CONTRACT_ADDRESS,
+            contractId: new Contract(process.env.INDEXER_CONTRACT_ADDRESS as string),
             id: '00000002-00000001',
             inSuccessfulContractCall: true,
             topic: [nativeToScVal('PaymentProcessed')],

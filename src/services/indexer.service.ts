@@ -122,7 +122,9 @@ export class IndexerService {
                 }
 
                 return {
-                  contractAddress: event.contractId.toLowerCase(),
+                  contractAddress: event.contractId
+                    ? event.contractId.toString().toLowerCase()
+                    : this.contractAddress,
                   eventName,
                   ledgerSequence: event.ledger,
                   transactionHash: event.txHash,
