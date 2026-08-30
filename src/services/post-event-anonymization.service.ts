@@ -28,7 +28,7 @@ export interface AnonymizeReport {
   eventsScanned: number;
   eventsEligible: number;
   eventsSkippedActive: number;
-  ordersRedacted: number;
+  ordersScanned: number;
   usersRedacted: number;
   usersSkippedActive: number;
   auditLogsCreated: number;
@@ -80,12 +80,12 @@ async function anonymizeEventAttendees(
   eventName: string,
   method: 'sha256' | 'placeholder',
   trigger: 'retention_expired' | 'manual',
-): Promise<{ ordersRedacted: number; usersRedacted: number }> {
+): Promise<{ ordersScanned: number; usersRedacted: number }> {
   // 1. Find completed ticket orders for this event
   const orders = await TicketOrder.find({ eventTicket: eventId }).lean();
 
   if (orders.length === 0) {
-    return { ordersRedacted: 0, usersRedacted: 0 };
+    return { ordersScanned: 0, usersRedacted: 0 };
   }
 
   // 2. Collect unique user IDs from these orders
@@ -97,7 +97,7 @@ async function anonymizeEventAttendees(
   const eligibleUserIds = userIds.filter((id) => !activeUserIds.has(id));
 
   if (eligibleUserIds.length === 0) {
-    return { ordersRedacted: 0, usersRedacted: 0 };
+    return { ordersScanned: orders.length, usersRedacted: 0 };
   }
 
   // 4. Anonymize each eligible user's PII
@@ -133,6 +133,9 @@ async function anonymizeEventAttendees(
     user.zkEmailVerified = false;
     user.zkPassportVerified = false;
 
+    // Mark user as anonymized to prevent re-processing
+    user.anonymizedAt = new Date();
+
     await user.save();
     usersRedacted++;
   }
@@ -141,7 +144,7 @@ async function anonymizeEventAttendees(
   await PrivacyAuditLog.create({
     eventId,
     eventName,
-    ordersRedacted: orders.length,
+    ordersScanned: orders.length,
     usersRedacted,
     fieldsRedacted: [...PII_FIELDS],
     method,
@@ -152,7 +155,7 @@ async function anonymizeEventAttendees(
       `${userIds.length - usersRedacted} user(s) skipped (active on other events or already anonymized).`,
   });
 
-  return { ordersRedacted: orders.length, usersRedacted };
+  return { ordersScanned: orders.length, usersRedacted };
 }
 
 /**
@@ -225,18 +228,18 @@ export async function runPostEventAnonymization(
     .select('_id')
     .lean();
 
-  let ordersRedacted = 0;
+  let ordersScanned = 0;
   let usersRedacted = 0;
   let auditLogsCreated = 0;
 
   // 3. Process each eligible event
   for (const event of eligibleEvents) {
-    const { ordersRedacted: o, usersRedacted: u } =
+    const { ordersScanned: o, usersRedacted: u } =
       await anonymizeEventAttendees(event._id, event.name, 'sha256', trigger);
 
-    ordersRedacted += o;
+    ordersScanned += o;
     usersRedacted += u;
-    if (o > 0 || u > 0) {
+    if (u > 0) {
       auditLogsCreated++;
     }
   }
@@ -245,7 +248,7 @@ export async function runPostEventAnonymization(
     eventsScanned: eligibleEvents.length + activeEvents.length,
     eventsEligible: eligibleEvents.length,
     eventsSkippedActive: activeEvents.length,
-    ordersRedacted,
+    ordersScanned,
     usersRedacted,
     usersSkippedActive: 0, // calculated per-event in anonymizeEventAttendees
     auditLogsCreated,

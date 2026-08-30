@@ -45,14 +45,12 @@ export const requestMagicLinkController: RequestHandler = async (req, res) => {
     user.magicTokenExpires = tokenExpires;
     await user.save();
 
-    logger.info(
-      `Magic link requested for ${email} from IP: ${req.ip} at ${new Date().toISOString()}`,
-    );
+    logger.info(`Magic link requested at ${new Date().toISOString()}`);
 
     try {
       await emailService.sendMagicLink(email, token);
     } catch (emailError: any) {
-      logger.error('Failed to send magic link email:', emailError.message);
+      logger.error({ err: emailError }, 'Failed to send magic link email');
 
       user.magicToken = undefined;
       user.magicTokenExpires = undefined;
@@ -68,7 +66,7 @@ export const requestMagicLinkController: RequestHandler = async (req, res) => {
       message: 'Magic link sent to your email. Please check your inbox.',
     });
   } catch (error: any) {
-    logger.error('Error in requestMagicLinkController:', error.message);
+    logger.error({ err: error }, 'Error in requestMagicLinkController');
     res.status(500).json({ message: 'An error occurred. Please try again.' });
   }
 };
@@ -109,14 +107,12 @@ export const verifyMagicLinkController: RequestHandler = async (req, res) => {
       await zkOrchestratorService.orchestrateForUser(user);
     } catch (error: any) {
       logger.error(
-        'zk orchestration failed during magic link verification:',
-        error.message || error,
+        { err: error },
+        'zk orchestration failed during magic link verification',
       );
     }
 
-    logger.info(
-      `Magic link verified for ${user.email} from IP: ${req.ip} at ${new Date().toISOString()}`,
-    );
+    logger.info(`Magic link verified at ${new Date().toISOString()}`);
 
     const jwtToken = generateToken(user);
 
@@ -130,7 +126,7 @@ export const verifyMagicLinkController: RequestHandler = async (req, res) => {
       },
     });
   } catch (error: any) {
-    logger.error('Error in verifyMagicLinkController:', error.message);
+    logger.error({ err: error }, 'Error in verifyMagicLinkController');
     res.status(500).json({ message: 'An error occurred. Please try again.' });
   }
 };

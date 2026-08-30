@@ -20,7 +20,7 @@ import logger from '../utils/logger';
  * Active / disputed events are never touched.
  *
  * Schedule: configurable via ANONYMIZATION_CRON (default: daily at 4 AM).
- * Retention window: configurable via RETENTION_DAYS (default: 30 days).
+ * Retention window: configurable via RETENTION_DAYS env var (default: 30 days).
  */
 
 // ─── Queue (shared handle so we can enqueue from other modules) ──────────────
@@ -71,7 +71,9 @@ const anonymizationWorker = new Worker(
     switch (name as AnonymizationJobType) {
       case AnonymizationJobType.POST_EVENT_ANONYMIZE: {
         const retentionDays =
-          data.retentionDaysOverride ?? DEFAULT_RETENTION_DAYS;
+          data.retentionDaysOverride ??
+          (parseInt(process.env.RETENTION_DAYS || '', 10) ||
+            DEFAULT_RETENTION_DAYS);
         const report = await runPostEventAnonymization(
           retentionDays,
           'retention_expired',

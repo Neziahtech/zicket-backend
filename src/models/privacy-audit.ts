@@ -4,8 +4,8 @@ export interface IPrivacyAuditLog extends Document {
   /** The event whose attendee PII was redacted. */
   eventId: mongoose.Types.ObjectId;
   eventName: string;
-  /** Number of ticket orders whose PII was redacted in this batch. */
-  ordersRedacted: number;
+  /** Number of ticket orders scanned for this event (not necessarily modified). */
+  ordersScanned: number;
   /** Number of associated user documents whose PII was cleared. */
   usersRedacted: number;
   /** Fields that were replaced (e.g. ['email', 'phone', 'displayName']). */
@@ -31,7 +31,7 @@ const privacyAuditLogSchema = new Schema<IPrivacyAuditLog>(
       index: true,
     },
     eventName: { type: String, required: true },
-    ordersRedacted: { type: Number, required: true, min: 0 },
+    ordersScanned: { type: Number, required: true, min: 0 },
     usersRedacted: { type: Number, required: true, min: 0 },
     fieldsRedacted: [{ type: String }],
     method: {

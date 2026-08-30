@@ -25,12 +25,14 @@ const createEmailBasedLimiter = (
     },
     // Custom handler for rate limit exceeded
     handler: (req: Request, res: Response) => {
-      logger.warn(`Rate limit exceeded for ${req.ip} on ${req.path}`, {
-        ip: req.ip,
-        path: req.path,
-        userAgent: req.get('User-Agent'),
-        timestamp: new Date().toISOString(),
-      });
+      logger.warn(
+        {
+          path: req.path,
+          userAgent: req.get('User-Agent'),
+          timestamp: new Date().toISOString(),
+        },
+        'Rate limit exceeded',
+      );
 
       res.status(429).json({
         error: message,
@@ -116,13 +118,12 @@ const createAnonymousActionLimiter = (
     },
     handler: (req: Request, res: Response) => {
       logger.warn(
-        `Anonymous rate limit exceeded for ${req.ip} on ${req.path}`,
         {
-          ip: req.ip,
           path: req.path,
           userAgent: req.get('User-Agent'),
           timestamp: new Date().toISOString(),
         },
+        'Anonymous rate limit exceeded',
       );
 
       res.status(429).json({

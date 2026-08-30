@@ -186,7 +186,7 @@ describe('Post-Event Anonymization Service', () => {
       const report = await runPostEventAnonymization(30, 'retention_expired');
 
       expect(report.eventsEligible).toBe(1);
-      expect(report.ordersRedacted).toBe(1);
+      expect(report.ordersScanned).toBe(1);
       expect(report.usersRedacted).toBe(1);
       expect(report.auditLogsCreated).toBe(1);
 
@@ -196,6 +196,9 @@ describe('Post-Event Anonymization Service', () => {
       expect(mockUserInstance.email).toContain('anonymized.zicket.local');
       expect(mockUserInstance.name).not.toBe('Alice Attendee');
       expect(mockUserInstance.name).toContain('[redacted]');
+
+      // Verify user marked as anonymized
+      expect(mockUserInstance.anonymizedAt).toBeInstanceOf(Date);
 
       // Verify auth fields cleared
       expect(mockUserInstance.password).toBeUndefined();
@@ -215,7 +218,7 @@ describe('Post-Event Anonymization Service', () => {
         expect.objectContaining({
           eventId,
           eventName: 'Past Hackathon',
-          ordersRedacted: 1,
+          ordersScanned: 1,
           usersRedacted: 1,
           fieldsRedacted: expect.arrayContaining(['email', 'name']),
           method: 'sha256',
@@ -282,9 +285,9 @@ describe('Post-Event Anonymization Service', () => {
 
       const report = await runPostEventAnonymization(30, 'retention_expired');
 
-      // Event was scanned but user was skipped
+      // Event was scanned but user was skipped (orders scanned but no users redacted)
       expect(report.eventsEligible).toBe(1);
-      expect(report.ordersRedacted).toBe(0);
+      expect(report.ordersScanned).toBe(1);
       expect(report.usersRedacted).toBe(0);
 
       // User should NOT have been touched
@@ -364,7 +367,7 @@ describe('Post-Event Anonymization Service', () => {
 
       expect(report.eventsScanned).toBe(0);
       expect(report.eventsEligible).toBe(0);
-      expect(report.ordersRedacted).toBe(0);
+      expect(report.ordersScanned).toBe(0);
       expect(report.usersRedacted).toBe(0);
       expect(report.auditLogsCreated).toBe(0);
     });
@@ -397,7 +400,7 @@ describe('Post-Event Anonymization Service', () => {
       const report = await runPostEventAnonymization(30, 'retention_expired');
 
       expect(report.eventsEligible).toBe(1);
-      expect(report.ordersRedacted).toBe(0);
+      expect(report.ordersScanned).toBe(0);
       expect(report.usersRedacted).toBe(0);
     });
   });

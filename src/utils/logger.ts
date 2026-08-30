@@ -35,7 +35,8 @@ function sanitizeObject(obj: any, seen = new WeakSet()): any {
     return {
       name: obj.name,
       message: sanitizeString(obj.message),
-      stack: obj.stack,
+      // Strip original stack — it may contain PII (emails, wallets)
+      stack: obj.stack ? sanitizeString(obj.stack) : undefined,
     };
   }
   if (Array.isArray(obj)) return obj.map((v) => sanitizeObject(v, seen));
@@ -71,6 +72,37 @@ const logger = pino({
     req: pino.stdSerializers.req,
     res: pino.stdSerializers.res,
   },
+  hooks: {
+    logMethod(args: any[], method: any) {
+      // Pino's standard contract: logger.method([mergingObject], [message], [...interpolationValues])
+      // When a string is passed as the first arg with no placeholders, extra trailing
+      // args (errors, objects) are silently dropped. Reorder so errors/objects become
+      // the first (mergingObject) arg and the string becomes the message.
+      if (args.length >= 2 && typeof args[0] === 'string') {
+        const message = args[0];
+        const rest = args.slice(1);
+        // If any remaining arg is an Error or object, promote it first
+        const hasStructurable = rest.some(
+          (a) => a instanceof Error || (typeof a === 'object' && a !== null),
+        );
+        if (hasStructurable) {
+          const merged: Record<string, any> = {};
+          const interpolationValues: any[] = [];
+          for (const arg of rest) {
+            if (arg instanceof Error) {
+              merged.err = arg;
+            } else if (typeof arg === 'object' && arg !== null) {
+              Object.assign(merged, arg);
+            } else {
+              interpolationValues.push(arg);
+            }
+          }
+          args = [merged, message, ...interpolationValues];
+        }
+      }
+      method.apply(this, args);
+    },
+  },
 });
 
 /**
@@ -91,7 +123,8 @@ const sanitizedLogger = {
   debug: sanitizeLogMethod(logger.debug.bind(logger)),
   fatal: sanitizeLogMethod(logger.fatal.bind(logger)),
   child: (bindings: Record<string, unknown>) => {
-    const child = logger.child(bindings);
+    const sanitizedBindings = sanitizeObject(bindings);
+    const child = logger.child(sanitizedBindings);
     return {
       info: sanitizeLogMethod(child.info.bind(child)),
       warn: sanitizeLogMethod(child.warn.bind(child)),

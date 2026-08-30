@@ -23,33 +23,33 @@ async function startServer() {
 
     // Connect to MongoDB
     await mongoConnect();
-    logger.info('âœ“ MongoDB connected');
+    logger.info('MongoDB connected');
 
     // Initialize queue service
     await queueService.initialize();
-    logger.info('âœ“ Queue service initialized');
+    logger.info('Queue service initialized');
 
     // Initialize email worker
     await emailWorker.initialize();
-    logger.info('âœ“ Email worker initialized');
+    logger.info('Email worker initialized');
 
     // Initialize zkEmail worker
     await zkEmailWorker.initialize();
-    logger.info('âœ“ zkEmail worker initialized');
+    logger.info('zkEmail worker initialized');
 
     // Initialize indexer worker
     await indexerWorker.initialize();
-    logger.info('âœ“ Indexer worker initialized');
+    logger.info('Indexer worker initialized');
 
     // Payment worker (processes webhook events via state machine)
-    logger.info('âœ“ Payment worker initialized');
+    logger.info('Payment worker initialized');
 
     // Reconciliation worker (periodic stale-tx cleanup via state machine)
-    logger.info('âœ“ Reconciliation worker initialized');
+    logger.info('Reconciliation worker initialized');
 
     // Retention worker (TTL hygiene + anonymization job retries)
     await initializeRetentionWorker();
-    logger.info('âœ“ Retention worker initialized');
+    logger.info('Retention worker initialized');
 
     await waitlistWorker.initialize();
     logger.info('Waitlist worker initialized');
@@ -60,11 +60,11 @@ async function startServer() {
 
     // Start Express server
     const server = app.listen(config.port, () => {
-      logger.info(`âœ“ Server running on port ${config.port}`);
+      logger.info(`Server running on port ${config.port}`);
     });
 
     server.on('error', (error) => {
-      logger.error('Failed to start server:', error);
+      logger.error({ err: error }, 'Failed to start server');
       void closeAllServices().finally(() => process.exit(1));
     });
 
@@ -87,7 +87,7 @@ async function startServer() {
           await close();
         } catch (error) {
           hadError = true;
-          logger.error(`Failed to close ${name}:`, error);
+          logger.error({ err: error }, `Failed to close ${name}`);
         }
       }
       return hadError;
@@ -95,7 +95,7 @@ async function startServer() {
 
     // Graceful shutdown
     const gracefulShutdown = async () => {
-      logger.info('\nðŸ›‘ Shutting down gracefully...');
+      logger.info('Shutting down gracefully...');
       server.close(async () => {
         logger.info('Express server stopped');
         const hadError = await closeAllServices();
@@ -115,7 +115,7 @@ async function startServer() {
     process.on('SIGTERM', gracefulShutdown);
     process.on('SIGINT', gracefulShutdown);
   } catch (error) {
-    logger.error('Failed to start server:', error);
+    logger.error({ err: error }, 'Failed to start server');
     process.exit(1);
   }
 }
