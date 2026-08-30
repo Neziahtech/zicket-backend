@@ -57,14 +57,29 @@ export class ReconciliationService {
     };
 
     const staleThreshold = new Date(Date.now() - STALE_MINUTES * 60 * 1000);
+    const isSoroban = isPaymentsContractConfigured();
 
-    // Only target transactions that have been pending for a while
-    const pendingTxs = await Transaction.find({
-      status: 'pending',
-      transactionDate: { $lte: staleThreshold },
-    })
-      .lean()
-      .limit(200); // Safety cap — avoids runaway queries
+    // If Soroban is enabled, we reconcile both pending transactions and recently failed ones (for late confirmations)
+    // If not, we just query pending transactions older than the stale threshold
+    let pendingTxs;
+    if (isSoroban) {
+      const failedThreshold = new Date(Date.now() - 24 * 60 * 60 * 1000);
+      pendingTxs = await Transaction.find({
+        $or: [
+          { status: 'pending' },
+          { status: 'failed', transactionDate: { $gte: failedThreshold } },
+        ],
+      })
+        .lean()
+        .limit(200);
+    } else {
+      pendingTxs = await Transaction.find({
+        status: 'pending',
+        transactionDate: { $lte: staleThreshold },
+      })
+        .lean()
+        .limit(200);
+    }
 
     report.scanned = pendingTxs.length;
 
@@ -74,7 +89,7 @@ export class ReconciliationService {
     }
 
     logger.info(
-      `[Reconciliation] Scanning ${pendingTxs.length} stale pending transactions...`,
+      `[Reconciliation] Scanning ${pendingTxs.length} transactions (isSoroban: ${isSoroban})...`,
     );
 
     const blockchain = BlockchainProvider.getInstance();
@@ -82,42 +97,107 @@ export class ReconciliationService {
 
     for (const tx of pendingTxs) {
       try {
-        const chainTx = await blockchain.fetchTransaction(tx.transactionId);
+        const isSorobanTx =
+          isSoroban &&
+          !tx.transactionId.startsWith('0x') &&
+          !tx.transactionId.startsWith('0X');
 
-        // Derive the correct state machine event from the chain result
-        const isStale = true; // These are already past the stale threshold
-        const smEvent: TransactionEvent = TransactionStateMachine.deriveEvent(
-          chainTx ? chainTx.status : null,
-          chainTx?.confirmations ?? 0,
-          minConfirmations,
-          isStale,
-        );
-
-        // CHAIN_PENDING = no state change needed
-        if (smEvent === 'CHAIN_PENDING') {
-          report.skipped++;
-          continue;
-        }
-
-        // Apply the transition via state machine
-        const result = await TransactionStateMachine.apply(smEvent, {
-          txHash: tx.transactionId,
-          blockNumber: chainTx?.blockNumber ?? undefined,
-          confirmations: chainTx?.confirmations ?? 0,
-          triggeredBy: 'reconciliation',
-        });
-
-        if (result.transitioned) {
-          if (result.newState === 'confirmed') {
-            report.confirmed++;
-          } else {
-            report.failed++;
-          }
-          logger.info(
-            `[Reconciliation] tx ${tx.transactionId} → ${result.newState}`,
+        if (isSorobanTx) {
+          const sorobanTx = await blockchain.fetchSorobanTransactionStatus(
+            tx.transactionId,
           );
+
+          if (sorobanTx.status === 'SUCCESS') {
+            const result = await TransactionStateMachine.apply(
+              'CHAIN_CONFIRMED',
+              {
+                txHash: tx.transactionId,
+                blockNumber: sorobanTx.ledger,
+                triggeredBy: 'reconciliation',
+              },
+            );
+            if (result.transitioned) {
+              report.confirmed++;
+              logger.info(
+                `[Reconciliation] tx ${tx.transactionId} → confirmed`,
+              );
+            } else {
+              report.skipped++;
+            }
+          } else if (sorobanTx.status === 'FAILED') {
+            const result = await TransactionStateMachine.apply('CHAIN_FAILED', {
+              txHash: tx.transactionId,
+              blockNumber: sorobanTx.ledger,
+              triggeredBy: 'reconciliation',
+            });
+            if (result.transitioned) {
+              report.failed++;
+              logger.info(`[Reconciliation] tx ${tx.transactionId} → failed`);
+            } else {
+              report.skipped++;
+            }
+          } else if (sorobanTx.status === 'NOT_FOUND') {
+            const txIsStale =
+              tx.transactionDate.getTime() <= staleThreshold.getTime();
+            if (txIsStale) {
+              const result = await TransactionStateMachine.apply(
+                'CHAIN_DROPPED',
+                {
+                  txHash: tx.transactionId,
+                  triggeredBy: 'reconciliation',
+                },
+              );
+              if (result.transitioned) {
+                report.failed++;
+                logger.info(
+                  `[Reconciliation] tx ${tx.transactionId} → failed (dropped/stale)`,
+                );
+              } else {
+                report.skipped++;
+              }
+            } else {
+              report.skipped++;
+            }
+          }
         } else {
-          report.skipped++;
+          // Original EVM behavior (only relevant for non-Soroban or EVM mock txs)
+          const chainTx = await blockchain.fetchTransaction(tx.transactionId);
+
+          // Derive the correct state machine event from the chain result
+          const isStale = true; // These are already past the stale threshold for EVM
+          const smEvent: TransactionEvent = TransactionStateMachine.deriveEvent(
+            chainTx ? chainTx.status : null,
+            chainTx?.confirmations ?? 0,
+            minConfirmations,
+            isStale,
+          );
+
+          // CHAIN_PENDING = no state change needed
+          if (smEvent === 'CHAIN_PENDING') {
+            report.skipped++;
+            continue;
+          }
+
+          // Apply the transition via state machine
+          const result = await TransactionStateMachine.apply(smEvent, {
+            txHash: tx.transactionId,
+            blockNumber: chainTx?.blockNumber ?? undefined,
+            confirmations: chainTx?.confirmations ?? 0,
+            triggeredBy: 'reconciliation',
+          });
+
+          if (result.transitioned) {
+            if (result.newState === 'confirmed') {
+              report.confirmed++;
+            } else {
+              report.failed++;
+            }
+            logger.info(
+              `[Reconciliation] tx ${tx.transactionId} → ${result.newState}`,
+            );
+          } else {
+            report.skipped++;
+          }
         }
       } catch (error) {
         const msg = `Failed to reconcile tx ${tx.transactionId}: ${error instanceof Error ? error.message : 'Unknown'}`;

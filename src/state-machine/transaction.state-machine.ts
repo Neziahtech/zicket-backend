@@ -69,7 +69,7 @@ const ALLOWED_TRANSITIONS: Record<TransactionState, Set<TransactionEvent>> = {
     'CHAIN_PENDING',
   ]),
   confirmed: new Set(['EVENT_CANCELLED']),
-  failed: new Set(),
+  failed: new Set(['CHAIN_CONFIRMED']),
   cancelled: new Set(),
 };
 
@@ -195,7 +195,12 @@ export class TransactionStateMachine {
         { session },
       );
 
-      const orderStatusFilter = targetState === 'cancelled' ? 1 : 0;
+      let orderStatusFilter = 0;
+      if (targetState === 'cancelled') {
+        orderStatusFilter = 1;
+      } else if (currentState === 'failed' && targetState === 'confirmed') {
+        orderStatusFilter = 3;
+      }
 
       const order = await TicketOrder.findOne({
         user: tx.user,
@@ -216,18 +221,33 @@ export class TransactionStateMachine {
         );
 
         if (targetState === 'confirmed') {
-          // Confirm inventory deduction (validates consistency)
-          const confirmResult =
-            await InventoryService.confirmInventoryDeduction(
+          if (currentState === 'failed') {
+            // Since it was failed, inventory was previously released. We must reserve it again!
+            const reserveResult = await InventoryService.reserveInventory(
               tx.eventTicket.toString(),
               order.quantity,
               session,
             );
 
-          if (!confirmResult.success) {
-            logger.warn(
-              `[StateMachine] Inventory confirmation issue for order ${order._id}: ${confirmResult.error}`,
-            );
+            if (!reserveResult.success) {
+              throw new Error(
+                `Failed to reserve inventory on failed->confirmed transition: ${reserveResult.error}`,
+              );
+            }
+          } else {
+            // Confirm inventory deduction (validates consistency)
+            const confirmResult =
+              await InventoryService.confirmInventoryDeduction(
+                tx.eventTicket.toString(),
+                order.quantity,
+                session,
+              );
+
+            if (!confirmResult.success) {
+              logger.warn(
+                `[StateMachine] Inventory confirmation issue for order ${order._id}: ${confirmResult.error}`,
+              );
+            }
           }
         } else if (targetState === 'failed') {
           // Release inventory back to pool on failure
