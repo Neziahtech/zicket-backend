@@ -11,6 +11,9 @@ import retentionWorker, {
 } from './workers/retention.worker';
 import indexerWorker from './workers/indexer.worker';
 import waitlistWorker from './workers/waitlist.worker';
+import anonymizationWorker, {
+  initializeAnonymizationWorker,
+} from './workers/anonymization.worker';
 
 async function startServer() {
   try {
@@ -50,6 +53,10 @@ async function startServer() {
     await waitlistWorker.initialize();
     console.log('Waitlist worker initialized');
 
+    // Anonymization worker (post-event PII redaction)
+    await initializeAnonymizationWorker();
+    console.log('Anonymization worker initialized');
+
     // Start Express server
     const server = app.listen(config.port, () => {
       console.log(`âœ“ Server running on port ${config.port}`);
@@ -67,6 +74,7 @@ async function startServer() {
         ['paymentWorker', () => paymentWorker.close()],
         ['reconciliationWorker', () => reconciliationWorker.close()],
         ['waitlistWorker', () => waitlistWorker.close()],
+        ['anonymizationWorker', () => anonymizationWorker.close()],
         ['retentionWorker', () => retentionWorker.close()],
         ['indexerWorker', () => Promise.resolve(indexerWorker.stop())],
         ['queueService', () => queueService.close()],
