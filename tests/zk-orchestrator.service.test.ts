@@ -11,6 +11,26 @@ type MockUser = {
   save: jest.Mock<Promise<void>, []>;
 };
 
+jest.mock('../src/utils/logger', () => ({
+  __esModule: true,
+  default: {
+    info: jest.fn(),
+    warn: jest.fn(),
+    error: jest.fn(),
+    debug: jest.fn(),
+    fatal: jest.fn(),
+    child: jest.fn().mockReturnThis(),
+  },
+  logger: {
+    info: jest.fn(),
+    warn: jest.fn(),
+    error: jest.fn(),
+    debug: jest.fn(),
+    fatal: jest.fn(),
+    child: jest.fn().mockReturnThis(),
+  },
+}));
+
 jest.mock('../src/services/queue.service', () => ({
   __esModule: true,
   default: {
