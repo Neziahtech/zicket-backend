@@ -36,7 +36,12 @@ jest.mock('snarkjs', () => ({
 
 describe('ZkOrchestratorService', () => {
   beforeEach(() => {
-    jest.resetAllMocks();
+    jest.restoreAllMocks();
+    // Re-establish fs mock behavior (resetAllMocks clears implementations)
+    const fs = require('fs');
+    fs.existsSync.mockReturnValue(false);
+    fs.readFileSync.mockReturnValue(undefined);
+    (queueService.enqueueZkEmailHook as jest.Mock).mockReset();
     delete process.env.ZKEMAIL_RELAY_URL;
     delete process.env.ZKPASSPORT_RELAY_URL;
   });
