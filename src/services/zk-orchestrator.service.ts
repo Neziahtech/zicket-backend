@@ -61,7 +61,14 @@ export class ZkIntegrationOrchestrator {
 
       // 2. Handle Verification Success
       if (verificationSuccess) {
-        await this.updateUserVerificationStatus(request.userId, usedProvider);
+        try {
+          await this.updateUserVerificationStatus(request.userId, usedProvider);
+        } catch (updateErr) {
+          logger.warn(
+            `[ZkOrchestrator] Failed to persist verification status for user ${request.userId}:`,
+            updateErr,
+          );
+        }
         return {
           success: true,
           providerUsed: usedProvider,
